@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, deleteMeeting, type Meeting } from '../db';
+import { db, deleteMeeting, type Meeting, type Task } from '../db';
+import { OrganizeDialog, type OrganizeApply } from '../components/OrganizeDialog';
 import { Notes } from '../components/Notes';
 import { useConfirm } from '../components/Confirm';
 import { TaskItem, TaskQuickAdd, sortTasks } from '../components/TaskList';
@@ -94,6 +95,7 @@ function MeetingEditor({ meeting, projects, onDone }: {
     title: meeting.title, date: meeting.date, attendees: meeting.attendees, notes: meeting.notes, projectId: meeting.projectId,
   });
   const [status, setStatus] = useState<'saved' | 'saving'>('saved');
+  const [organizing, setOrganizing] = useState(false);
   const first = useRef(true);
   const latest = useRef(form);
   latest.current = form;
@@ -115,6 +117,17 @@ function MeetingEditor({ meeting, projects, onDone }: {
   }
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const project = projects.find((p) => p.id === form.projectId);
+
+  async function applyOrganized(r: OrganizeApply) {
+    setForm((f) => ({ ...f, notes: r.notes, title: r.title ?? f.title }));
+    const now = Date.now();
+    if (r.tasks.length) {
+      await db.tasks.bulkAdd(r.tasks.map((t) => ({
+        projectId: form.projectId, meetingId: meeting.id, title: t.title, dueDate: t.dueDate, done: 0, createdAt: now,
+      }) as Task));
+    }
+  }
 
   return (
     <section className="card editor">
@@ -138,21 +151,34 @@ function MeetingEditor({ meeting, projects, onDone }: {
           <input value={form.attendees} onChange={(e) => set('attendees', e.target.value)} placeholder="Ana, Luis, cliente…" />
         </label>
       </div>
-      <label className="notes-label">
-        Notas
+      <div className="notes-label">
+        <div className="notes-label-row">
+          <span>Notas</span>
+          <button type="button" className="btn ai small" onClick={() => setOrganizing(true)}>✨ Ordenar con IA</button>
+        </div>
         <textarea
           className="notes-input"
           value={form.notes}
           onChange={(e) => set('notes', e.target.value)}
           autoFocus={!!form.title}
-          placeholder={'Escribe aquí lo que se habla en la reunión.\n\n# Temas\n- Punto tratado\n- **Decisión importante**\n\n[ ] Algo pendiente'}
+          aria-label="Notas"
+          placeholder={'Escribe aquí lo que se habla en la reunión, aunque sea desordenado.\nLuego pulsa «Ordenar con IA».\n\n# Temas\n- Punto tratado\n- **Decisión importante**\n\n[ ] Algo pendiente'}
         />
-      </label>
+      </div>
       <div className="form-actions">
         <span className="muted small">Formato: # título · - viñeta · **negrita** · [ ] casilla</span>
         <span className="spacer" />
         <button className="btn primary" onClick={finish}>Hecho</button>
       </div>
+      {organizing && (
+        <OrganizeDialog
+          initialText={form.notes}
+          currentTitle={form.title}
+          ctx={{ projectName: project?.name ?? '', company: project?.company ?? '', meetingDate: form.date, attendees: form.attendees }}
+          onApply={applyOrganized}
+          onClose={() => setOrganizing(false)}
+        />
+      )}
     </section>
   );
 }

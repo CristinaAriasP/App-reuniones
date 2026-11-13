@@ -5,4 +5,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   base: './',
+  build: {
+    chunkSizeWarningLimit: 1200,
+    // Un solo archivo JS: más simple de publicar en cualquier sitio
+    rollupOptions: { output: { inlineDynamicImports: true } },
+  },
 });

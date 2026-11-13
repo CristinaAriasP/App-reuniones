@@ -43,6 +43,7 @@ function Layout() {
           <Route path="/proyecto/:id" element={<ProjectPage />} />
           <Route path="/reunion/:id" element={<MeetingPage />} />
           <Route path="/buscar" element={<SearchPage />} />
+          <Route path="/ajustes" element={<BackupPage />} />
           <Route path="/copia" element={<BackupPage />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
@@ -113,7 +114,7 @@ function Sidebar() {
       </div>
 
       <nav className="nav sidebar-bottom">
-        <NavLink to="/copia">💾 Copia de seguridad</NavLink>
+        <NavLink to="/ajustes">⚙️ Ajustes y copia</NavLink>
       </nav>
 
       {creating && (
