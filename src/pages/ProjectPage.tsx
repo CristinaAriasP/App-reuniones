@@ -3,13 +3,14 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, deleteProject, STATUS_LABEL, type Deliverable } from '../db';
 import { ProjectForm } from '../components/ProjectForm';
+import { ProjectAnswers } from '../components/ProjectAnswers';
 import { useConfirm } from '../components/Confirm';
 import { NewMeetingDialog } from '../components/NewMeeting';
 import { DeliverableForm } from '../components/DeliverableForm';
 import { DueBadge, TaskItem, TaskQuickAdd, sortTasks } from '../components/TaskList';
 import { formatDate, highlight, matchesAll, monthLabel, searchTerms, snippet } from '../utils';
 
-type Tab = 'reuniones' | 'tareas' | 'entregas';
+type Tab = 'reuniones' | 'cuestionario' | 'tareas' | 'entregas';
 
 export function ProjectPage() {
   const id = Number(useParams().id);
@@ -92,6 +93,9 @@ export function ProjectPage() {
         <button role="tab" aria-selected={tab === 'reuniones'} onClick={() => setTab('reuniones')}>
           Reuniones <span className="count">{meetings.length}</span>
         </button>
+        <button role="tab" aria-selected={tab === 'cuestionario'} onClick={() => setTab('cuestionario')}>
+          Cuestionario
+        </button>
         <button role="tab" aria-selected={tab === 'tareas'} onClick={() => setTab('tareas')}>
           Tareas <span className="count">{pendingCount}</span>
         </button>
@@ -153,6 +157,8 @@ export function ProjectPage() {
           )}
         </section>
       )}
+
+      {tab === 'cuestionario' && <ProjectAnswers projectId={id} />}
 
       {tab === 'entregas' && (
         <section>

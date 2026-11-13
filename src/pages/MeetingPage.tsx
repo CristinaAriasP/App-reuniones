@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, deleteMeeting, type Meeting, type Task } from '../db';
+import { db, deleteMeeting, isAnswered, saveAnswer, type Meeting, type Task } from '../db';
 import { OrganizeDialog, type OrganizeApply } from '../components/OrganizeDialog';
 import { Notes } from '../components/Notes';
+import { Questionnaire, useMeetingQuestionnaire } from '../components/Questionnaire';
 import { useConfirm } from '../components/Confirm';
 import { TaskItem, TaskQuickAdd, sortTasks } from '../components/TaskList';
 import { formatLongDate, searchTerms } from '../utils';
@@ -74,6 +75,8 @@ export function MeetingPage() {
         </>
       )}
 
+      <Questionnaire meeting={meeting} />
+
       <section className="card">
         <h2>Tareas de esta reunión</h2>
         <TaskQuickAdd projectId={meeting.projectId} meetingId={meeting.id} />
@@ -96,6 +99,7 @@ function MeetingEditor({ meeting, projects, onDone }: {
   });
   const [status, setStatus] = useState<'saved' | 'saving'>('saved');
   const [organizing, setOrganizing] = useState(false);
+  const questionnaire = useMeetingQuestionnaire(meeting.id);
   const first = useRef(true);
   const latest = useRef(form);
   latest.current = form;
@@ -106,6 +110,7 @@ function MeetingEditor({ meeting, projects, onDone }: {
     setStatus('saving');
     const t = setTimeout(async () => {
       await db.meetings.update(meeting.id, { ...form, updatedAt: Date.now() });
+      await db.answers.where('meetingId').equals(meeting.id).modify({ projectId: form.projectId });
       setStatus('saved');
     }, 600);
     return () => clearTimeout(t);
@@ -126,6 +131,9 @@ function MeetingEditor({ meeting, projects, onDone }: {
       await db.tasks.bulkAdd(r.tasks.map((t) => ({
         projectId: form.projectId, meetingId: meeting.id, title: t.title, dueDate: t.dueDate, done: 0, createdAt: now,
       }) as Task));
+    }
+    for (const a of r.answers) {
+      await saveAnswer({ id: meeting.id, projectId: form.projectId }, a.questionId, { choice: a.choice, selected: a.selected, text: a.text });
     }
   }
 
@@ -174,7 +182,8 @@ function MeetingEditor({ meeting, projects, onDone }: {
         <OrganizeDialog
           initialText={form.notes}
           currentTitle={form.title}
-          ctx={{ projectName: project?.name ?? '', company: project?.company ?? '', meetingDate: form.date, attendees: form.attendees }}
+          answeredIds={new Set((questionnaire?.questions ?? []).filter((q) => isAnswered(questionnaire?.byQ.get(q.id))).map((q) => q.id))}
+          ctx={{ questions: (questionnaire?.questions ?? []).filter((q) => !q.archived), projectName: project?.name ?? '', company: project?.company ?? '', meetingDate: form.date, attendees: form.attendees }}
           onApply={applyOrganized}
           onClose={() => setOrganizing(false)}
         />

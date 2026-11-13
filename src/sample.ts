@@ -1,4 +1,4 @@
-import { db, type Deliverable, type Meeting, type Project, type Task } from './db';
+import { db, type Answer, type Deliverable, type Meeting, type Project, type Task } from './db';
 import { toISO } from './utils';
 
 const day = (offset: number) => {
@@ -10,7 +10,7 @@ const day = (offset: number) => {
 /** Carga unos proyectos de ejemplo para probar la app. */
 export async function loadSampleData() {
   const now = Date.now();
-  await db.transaction('rw', [db.projects, db.meetings, db.tasks, db.deliverables], async () => {
+  await db.transaction('rw', [db.projects, db.meetings, db.tasks, db.deliverables, db.questions, db.answers], async () => {
     const p = async (name: string, company: string, color: string, description: string) =>
       (await db.projects.add({ name, company, color, description, archived: false, createdAt: now } as Project)) as number;
     const m = async (projectId: number, offset: number, title: string, attendees: string, notes: string) =>
@@ -32,6 +32,10 @@ export async function loadSampleData() {
       '# Comentarios del cliente\n- Les gusta la propuesta B, más limpia\n- Quieren el logo más grande en móvil\n- **Cambiar el azul por el de su manual de marca**\n\n# Dudas abiertas\n- ¿Blog en la primera fase? Lo confirman la semana que viene');
     await t(web, s, 'Aplicar colores del manual de marca', 3);
     await t(web, s, 'Confirmar si el blog entra en la fase 1', 5);
+    const q1 = await db.questions.orderBy('order').filter((q) => !q.archived).first();
+    if (q1) {
+      await db.answers.add({ meetingId: k, questionId: q1.id, projectId: web, choice: 'si', selected: q1.options.slice(0, 2), text: 'Para que sus clientes vean el estado de sus pedidos', updatedAt: now } as Answer);
+    }
     await d(web, 'Propuesta de diseño v2', 4, 'en_curso', 'Con los cambios de la revisión del día ' + day(-7));
     await d(web, 'Lanzamiento de la web', 52, 'pendiente');
     await d(web, 'Propuesta de diseño v1', -10, 'entregado');

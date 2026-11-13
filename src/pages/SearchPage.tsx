@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, STATUS_LABEL } from '../db';
+import { answerText, db, STATUS_LABEL } from '../db';
 import { formatDate, highlight, matchesAll, searchTerms, snippet } from '../utils';
 
 type Kind = 'todo' | 'reuniones' | 'tareas' | 'entregas';
@@ -26,10 +26,19 @@ export function SearchPage() {
   }, [input, q, setParams]);
 
   const all = useLiveQuery(async () => {
-    const [projects, meetings, tasks, deliverables] = await Promise.all([
+    const [projects, meetings, tasks, deliverables, questions, answers] = await Promise.all([
       db.projects.toArray(), db.meetings.toArray(), db.tasks.toArray(), db.deliverables.toArray(),
+      db.questions.toArray(), db.answers.toArray(),
     ]);
-    return { projects, meetings, tasks, deliverables };
+    // Texto del cuestionario de cada reunión, para poder buscar también en las respuestas
+    const qText = new Map(questions.map((q) => [q.id, q.text]));
+    const answersByMeeting = new Map<number, string>();
+    for (const a of answers) {
+      const t = answerText(a);
+      if (!t) continue;
+      answersByMeeting.set(a.meetingId, (answersByMeeting.get(a.meetingId) ?? '') + `\n${qText.get(a.questionId) ?? ''} ${t}`);
+    }
+    return { projects, meetings, tasks, deliverables, answersByMeeting };
   }, []);
 
   if (!all) return null;
@@ -42,7 +51,7 @@ export function SearchPage() {
   const hasFilter = terms.length > 0 || projectId !== '' || from || to;
 
   const meetings = !hasFilter ? [] : all.meetings
-    .filter((m) => inProject(m.projectId) && inRange(m.date) && matchesAll(`${m.title} ${m.attendees} ${m.notes} ${ctx(m.projectId)}`, terms))
+    .filter((m) => inProject(m.projectId) && inRange(m.date) && matchesAll(`${m.title} ${m.attendees} ${m.notes} ${ctx(m.projectId)} ${all.answersByMeeting.get(m.id) ?? ''}`, terms))
     .sort((a, b) => b.date.localeCompare(a.date));
   const tasks = !hasFilter ? [] : all.tasks
     .filter((t) => inProject(t.projectId) && inRange(t.dueDate || (t.meetingId ? meetingById.get(t.meetingId)?.date ?? '' : '')) && matchesAll(`${t.title} ${ctx(t.projectId)}`, terms))
@@ -111,6 +120,9 @@ export function SearchPage() {
               <ProjectTag pid={m.projectId} />
               {m.attendees && <div className="row-sub">👥 {highlight(m.attendees, terms)}</div>}
               {m.notes && <p className="excerpt">{highlight(snippet(m.notes, terms), terms)}</p>}
+              {terms.length > 0 && !matchesAll(`${m.title} ${m.attendees} ${m.notes}`, terms) && all.answersByMeeting.get(m.id) && (
+                <p className="excerpt">📋 {highlight(snippet(all.answersByMeeting.get(m.id)!, terms), terms)}</p>
+              )}
             </Link>
           ))}
         </section>

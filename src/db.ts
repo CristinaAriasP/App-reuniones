@@ -43,11 +43,48 @@ export interface Deliverable {
   createdAt: number;
 }
 
+/** Pregunta de la plantilla que se responde en cada reunión. */
+export type QuestionKind = 'sino' | 'opciones' | 'texto';
+
+export interface Question {
+  id: number;
+  text: string;
+  kind: QuestionKind;
+  /** sino: opciones que se despliegan si la respuesta es «Sí». opciones: lista para marcar. */
+  options: string[];
+  order: number;
+  archived: boolean;
+  createdAt: number;
+}
+
+export type Choice = '' | 'si' | 'no' | 'nose';
+
+export interface Answer {
+  id: number;
+  meetingId: number;
+  questionId: number;
+  projectId: number;
+  choice: Choice;
+  selected: string[];
+  text: string;
+  updatedAt: number;
+}
+
+export const CHOICE_LABEL: Record<Exclude<Choice, ''>, string> = { si: 'Sí', no: 'No', nose: 'Por confirmar' };
+
+export const KIND_LABEL: Record<QuestionKind, string> = {
+  sino: 'Sí / No (con opciones si es «Sí»)',
+  opciones: 'Opciones para marcar',
+  texto: 'Respuesta libre',
+};
+
 export const db = new Dexie('app-reuniones') as Dexie & {
   projects: EntityTable<Project, 'id'>;
   meetings: EntityTable<Meeting, 'id'>;
   tasks: EntityTable<Task, 'id'>;
   deliverables: EntityTable<Deliverable, 'id'>;
+  questions: EntityTable<Question, 'id'>;
+  answers: EntityTable<Answer, 'id'>;
 };
 
 db.version(1).stores({
@@ -56,6 +93,45 @@ db.version(1).stores({
   tasks: '++id, projectId, meetingId, dueDate, done',
   deliverables: '++id, projectId, dueDate, status',
 });
+
+const DEFAULT_QUESTIONS: Omit<Question, 'id'>[] = [
+  { text: '¿Necesita plataforma interna?', kind: 'sino', options: ['Inicio de sesión', 'Espacio cliente'], order: 1, archived: false, createdAt: 0 },
+];
+
+db.version(2).stores({
+  questions: '++id, order',
+  answers: '++id, meetingId, questionId, projectId, &[meetingId+questionId]',
+}).upgrade(async (tx) => {
+  await tx.table('questions').bulkAdd(DEFAULT_QUESTIONS);
+});
+
+db.on('populate', async (tx) => {
+  await tx.table('questions').bulkAdd(DEFAULT_QUESTIONS);
+});
+
+/** Una respuesta cuenta como contestada si tiene algo. */
+export function isAnswered(a: Answer | undefined): boolean {
+  return !!a && (a.choice !== '' || a.selected.length > 0 || a.text.trim() !== '');
+}
+
+export async function saveAnswer(meeting: { id: number; projectId: number }, questionId: number, patch: Partial<Pick<Answer, 'choice' | 'selected' | 'text'>>) {
+  await db.transaction('rw', db.answers, async () => {
+    const existing = await db.answers.where('[meetingId+questionId]').equals([meeting.id, questionId]).first();
+    if (existing) {
+      await db.answers.update(existing.id, { ...patch, projectId: meeting.projectId, updatedAt: Date.now() });
+    } else {
+      await db.answers.add({
+        meetingId: meeting.id, questionId, projectId: meeting.projectId,
+        choice: '', selected: [], text: '', ...patch, updatedAt: Date.now(),
+      } as Answer);
+    }
+  });
+}
+
+/** Texto legible de una respuesta (para búsquedas y resúmenes). */
+export function answerText(a: Answer): string {
+  return [a.choice ? CHOICE_LABEL[a.choice] : '', a.selected.join(', '), a.text].filter(Boolean).join(' · ');
+}
 
 export const STATUS_LABEL: Record<DeliverableStatus, string> = {
   pendiente: 'Pendiente',
@@ -68,7 +144,8 @@ export const PROJECT_COLORS = [
 ];
 
 export async function deleteProject(id: number) {
-  await db.transaction('rw', [db.projects, db.meetings, db.tasks, db.deliverables], async () => {
+  await db.transaction('rw', [db.projects, db.meetings, db.tasks, db.deliverables, db.answers], async () => {
+    await db.answers.where('projectId').equals(id).delete();
     await db.meetings.where('projectId').equals(id).delete();
     await db.tasks.where('projectId').equals(id).delete();
     await db.deliverables.where('projectId').equals(id).delete();
@@ -77,7 +154,8 @@ export async function deleteProject(id: number) {
 }
 
 export async function deleteMeeting(id: number) {
-  await db.transaction('rw', [db.meetings, db.tasks], async () => {
+  await db.transaction('rw', [db.meetings, db.tasks, db.answers], async () => {
+    await db.answers.where('meetingId').equals(id).delete();
     // Las tareas de la reunión se conservan en el proyecto, solo se desvinculan
     await db.tasks.where('meetingId').equals(id).modify({ meetingId: null });
     await db.meetings.delete(id);
@@ -88,8 +166,10 @@ export async function deleteMeeting(id: number) {
 
 export interface Backup {
   app: 'app-reuniones';
-  version: 1;
+  version: 1 | 2;
   exportedAt: string;
+  questions?: Question[];
+  answers?: Answer[];
   projects: Project[];
   meetings: Meeting[];
   tasks: Task[];
@@ -97,21 +177,29 @@ export interface Backup {
 }
 
 export async function exportBackup(): Promise<Backup> {
-  const [projects, meetings, tasks, deliverables] = await Promise.all([
+  const [projects, meetings, tasks, deliverables, questions, answers] = await Promise.all([
     db.projects.toArray(),
     db.meetings.toArray(),
     db.tasks.toArray(),
     db.deliverables.toArray(),
+    db.questions.toArray(),
+    db.answers.toArray(),
   ]);
-  return { app: 'app-reuniones', version: 1, exportedAt: new Date().toISOString(), projects, meetings, tasks, deliverables };
+  return { app: 'app-reuniones', version: 2, exportedAt: new Date().toISOString(), projects, meetings, tasks, deliverables, questions, answers };
 }
 
 export async function importBackup(data: Backup) {
   if (data?.app !== 'app-reuniones' || !Array.isArray(data.projects)) {
     throw new Error('El archivo no es una copia de seguridad válida de esta app.');
   }
-  await db.transaction('rw', [db.projects, db.meetings, db.tasks, db.deliverables], async () => {
-    await Promise.all([db.projects.clear(), db.meetings.clear(), db.tasks.clear(), db.deliverables.clear()]);
+  await db.transaction('rw', [db.projects, db.meetings, db.tasks, db.deliverables, db.questions, db.answers], async () => {
+    await Promise.all([db.projects.clear(), db.meetings.clear(), db.tasks.clear(), db.deliverables.clear(), db.answers.clear()]);
+    // Las copias antiguas no traen preguntas: se conserva la plantilla actual
+    if (data.questions) {
+      await db.questions.clear();
+      await db.questions.bulkAdd(data.questions);
+    }
+    await db.answers.bulkAdd(data.answers ?? []);
     await db.projects.bulkAdd(data.projects);
     await db.meetings.bulkAdd(data.meetings ?? []);
     await db.tasks.bulkAdd(data.tasks ?? []);

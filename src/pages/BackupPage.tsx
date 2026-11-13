@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { exportBackup, importBackup } from '../db';
 import { todayISO } from '../utils';
 import { useConfirm } from '../components/Confirm';
+import { QuestionsEditor } from '../components/QuestionsEditor';
 import { getApiKey, isInClaudeViewer, setApiKey } from '../ai';
 
 export function BackupPage() {
@@ -36,6 +37,7 @@ export function BackupPage() {
   return (
     <div className="page narrow">
       <h1>Ajustes</h1>
+      <QuestionsEditor />
       <AISettings />
       <section className="card">
         <h2>Copia de seguridad</h2>

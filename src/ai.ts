@@ -18,11 +18,25 @@ export const OrganizedSchema = z.object({
     dueDate: z.string().describe('Fecha límite en formato YYYY-MM-DD, o cadena vacía si no se menciona'),
   })).describe('Tareas o próximos pasos'),
   questions: z.array(z.string()).describe('Dudas abiertas o temas pendientes de confirmar'),
+  answers: z.array(z.object({
+    questionId: z.number().describe('id de la pregunta del cuestionario'),
+    choice: z.enum(['si', 'no', 'nose', '']).describe('Para preguntas sino: si, no, nose (por confirmar); vacío en otras'),
+    selected: z.array(z.string()).describe('Opciones de la lista que aplican, escritas exactamente igual'),
+    text: z.string().describe('Comentario o respuesta libre; vacío si no hace falta'),
+  })).describe('Respuestas al cuestionario, solo de las preguntas que el texto permite responder'),
 });
 
 export type Organized = z.infer<typeof OrganizedSchema>;
 
+export interface OrganizeQuestion {
+  id: number;
+  text: string;
+  kind: 'sino' | 'opciones' | 'texto';
+  options: string[];
+}
+
 export interface OrganizeContext {
+  questions: OrganizeQuestion[];
   projectName: string;
   company: string;
   meetingDate: string;
@@ -47,14 +61,46 @@ Te paso una lluvia de ideas desordenada, escrita deprisa durante la reunión. Or
 - Extrae las tareas o próximos pasos como acciones concretas. Si se menciona una fecha relativa ("el viernes", "la semana que viene"), conviértela a YYYY-MM-DD tomando como referencia la fecha de la reunión. Si no hay fecha, deja dueDate vacío.
 - Recoge las dudas o temas pendientes de confirmar.
 - Si una lista no tiene contenido, devuélvela vacía.
-
+${questionsBlock(ctx.questions)}
 Lluvia de ideas:
 """
 ${raw}
 """
 
 Responde solo con un objeto JSON con esta forma:
-{"title": string, "summary": string, "sections": [{"heading": string, "points": [string]}], "decisions": [string], "tasks": [{"title": string, "owner": string, "dueDate": "YYYY-MM-DD" o ""}], "questions": [string]}`;
+{"title": string, "summary": string, "sections": [{"heading": string, "points": [string]}], "decisions": [string], "tasks": [{"title": string, "owner": string, "dueDate": "YYYY-MM-DD" o ""}], "questions": [string], "answers": [{"questionId": number, "choice": "si"|"no"|"nose"|"", "selected": [string], "text": string}]}`;
+}
+
+function questionsBlock(qs: OrganizeQuestion[]): string {
+  if (!qs.length) return '- No hay cuestionario: devuelve "answers" vacío.\n';
+  const lines = qs.map((q) => {
+    const kind = q.kind === 'sino' ? 'sí/no' : q.kind === 'opciones' ? 'marcar opciones' : 'respuesta libre';
+    const opts = q.options.length ? `; opciones: ${q.options.map((o) => `"${o}"`).join(', ')}` : '';
+    return `  - id ${q.id}: ${q.text} (${kind}${opts})`;
+  });
+  return `- Además, responde el cuestionario de la reunión SOLO con lo que diga el texto. Si el texto no dice nada de una pregunta, no la incluyas en "answers". Si se menciona pero no está decidido, usa choice "nose". En "selected" usa solo opciones de la lista, escritas igual; si se menciona algo que no está en la lista, ponlo en "text".
+  Cuestionario:
+${lines.join('\n')}
+`;
+}
+
+/** Descarta respuestas a preguntas desconocidas u opciones que no existen. */
+export function cleanAnswers(o: Organized, qs: OrganizeQuestion[]): Organized['answers'] {
+  const byId = new Map(qs.map((q) => [q.id, q]));
+  const out: Organized['answers'] = [];
+  for (const a of o.answers) {
+    const q = byId.get(Number(a.questionId));
+    if (!q) continue;
+    const extra = a.selected.filter((s) => !q.options.includes(s));
+    const ans = {
+      questionId: q.id,
+      choice: q.kind === 'sino' ? a.choice : ('' as const),
+      selected: q.kind === 'texto' ? [] : a.selected.filter((s) => q.options.includes(s)),
+      text: [a.text.trim(), ...extra].filter(Boolean).join('. '),
+    };
+    if (ans.choice || ans.selected.length || ans.text) out.push(ans);
+  }
+  return out;
 }
 
 // ---------- Proveedores ----------

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AIError, getOrganizer, isInClaudeViewer, toNotes, type AIMode, type OrganizeContext, type Organized } from '../ai';
+import { AIError, cleanAnswers, getOrganizer, isInClaudeViewer, toNotes, type AIMode, type OrganizeContext, type Organized } from '../ai';
 import { formatDate } from '../utils';
+import { CHOICE_LABEL } from '../db';
 import { Modal } from './Modal';
 import { Notes } from './Notes';
 
@@ -9,12 +10,14 @@ export interface OrganizeApply {
   notes: string;
   title: string | null;
   tasks: { title: string; dueDate: string }[];
+  answers: Organized['answers'];
 }
 
 type Phase = 'input' | 'working' | 'review';
 
-export function OrganizeDialog({ initialText, ctx, currentTitle, onApply, onClose }: {
+export function OrganizeDialog({ initialText, ctx, currentTitle, answeredIds, onApply, onClose }: {
   initialText: string;
+  answeredIds: Set<number>;
   ctx: OrganizeContext;
   currentTitle: string;
   onApply: (r: OrganizeApply) => void;
@@ -28,6 +31,7 @@ export function OrganizeDialog({ initialText, ctx, currentTitle, onApply, onClos
   const [keepOriginal, setKeepOriginal] = useState(true);
   const [useTitle, setUseTitle] = useState(!currentTitle.trim());
   const [picked, setPicked] = useState<boolean[]>([]);
+  const [pickedA, setPickedA] = useState<boolean[]>([]);
   const ctl = useRef<AbortController | null>(null);
   const organizer = useRef<Awaited<ReturnType<typeof getOrganizer>>>(null);
 
@@ -48,8 +52,11 @@ export function OrganizeDialog({ initialText, ctx, currentTitle, onApply, onClos
     ctl.current = new AbortController();
     try {
       const r = await organizer.current.organize(raw, ctx, { signal: ctl.current.signal });
-      setResult(r);
+      const answers = cleanAnswers(r, ctx.questions);
+      setResult({ ...r, answers });
       setPicked(r.tasks.map(() => true));
+      // No sobrescribir por defecto lo que ya se respondió a mano
+      setPickedA(answers.map((a) => !answeredIds.has(a.questionId)));
       setPhase('review');
     } catch (e) {
       setPhase('input');
@@ -69,6 +76,7 @@ export function OrganizeDialog({ initialText, ctx, currentTitle, onApply, onClos
         title: t.owner ? `${t.title} (${t.owner})` : t.title,
         dueDate: /^\d{4}-\d{2}-\d{2}$/.test(t.dueDate) ? t.dueDate : '',
       })),
+      answers: result.answers.filter((_, i) => pickedA[i]),
     });
     onClose();
   }
@@ -145,6 +153,34 @@ export function OrganizeDialog({ initialText, ctx, currentTitle, onApply, onClos
                     </label>
                   </li>
                 ))}
+              </ul>
+            </div>
+          )}
+
+          {result.answers.length > 0 && (
+            <div className="field">
+              <span>Respuestas al cuestionario</span>
+              <ul className="pick-list">
+                {result.answers.map((a, i) => {
+                  const q = ctx.questions.find((x) => x.id === a.questionId)!;
+                  return (
+                    <li key={a.questionId}>
+                      <label className="check-row align-start">
+                        <input type="checkbox" checked={pickedA[i] ?? false}
+                          onChange={(e) => setPickedA((p) => p.map((v, j) => (j === i ? e.target.checked : v)))} />
+                        <span className="grow">
+                          <span className="q-mini">{q.text}</span>
+                          <span className="answer-line">
+                            {a.choice && <span className={`badge choice-${a.choice}`}>{CHOICE_LABEL[a.choice]}</span>}
+                            {a.selected.map((s) => <span key={s} className="opt-chip on static">{s}</span>)}
+                            {a.text && <span>{a.text}</span>}
+                          </span>
+                          {answeredIds.has(a.questionId) && <span className="muted small">Ya estaba respondida: si la marcas, se sustituye.</span>}
+                        </span>
+                      </label>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
