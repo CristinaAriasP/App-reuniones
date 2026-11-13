@@ -105,8 +105,28 @@ db.version(2).stores({
   await tx.table('questions').bulkAdd(DEFAULT_QUESTIONS);
 });
 
+// Preguntas añadidas más tarde a la plantilla por defecto
+const QUESTIONS_V3: Omit<Question, 'id' | 'order'>[] = [
+  { text: '¿La web va a tener newsletter?', kind: 'sino', options: [], archived: false, createdAt: 0 },
+  { text: '¿La web va a tener apartado de blog o noticias?', kind: 'sino', options: ['Blog', 'Noticias'], archived: false, createdAt: 0 },
+];
+
+async function addMissingQuestions(table: Dexie.Table<Question, number>, list: Omit<Question, 'id' | 'order'>[]) {
+  const existing = await table.toArray();
+  const texts = new Set(existing.map((q) => q.text.trim().toLowerCase()));
+  let order = existing.reduce((m, q) => Math.max(m, q.order), 0);
+  for (const q of list) {
+    if (!texts.has(q.text.toLowerCase())) await table.add({ ...q, order: ++order } as Question);
+  }
+}
+
+db.version(3).stores({}).upgrade(async (tx) => {
+  await addMissingQuestions(tx.table('questions'), QUESTIONS_V3);
+});
+
 db.on('populate', async (tx) => {
   await tx.table('questions').bulkAdd(DEFAULT_QUESTIONS);
+  await addMissingQuestions(tx.table('questions'), QUESTIONS_V3);
 });
 
 /** Una respuesta cuenta como contestada si tiene algo. */
