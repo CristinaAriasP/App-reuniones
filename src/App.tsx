@@ -3,6 +3,7 @@ import { HashRouter, NavLink, Route, Routes, useNavigate, useLocation } from 're
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Project } from './db';
 import { ProjectForm } from './components/ProjectForm';
+import { ConfirmProvider } from './components/Confirm';
 import { Dashboard } from './pages/Dashboard';
 import { ProjectPage } from './pages/ProjectPage';
 import { MeetingPage } from './pages/MeetingPage';
@@ -12,7 +13,9 @@ import { BackupPage } from './pages/BackupPage';
 export default function App() {
   return (
     <HashRouter>
-      <Layout />
+      <ConfirmProvider>
+        <Layout />
+      </ConfirmProvider>
     </HashRouter>
   );
 }

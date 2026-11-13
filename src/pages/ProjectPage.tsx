@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, deleteProject, STATUS_LABEL, type Deliverable } from '../db';
 import { ProjectForm } from '../components/ProjectForm';
+import { useConfirm } from '../components/Confirm';
 import { NewMeetingDialog } from '../components/NewMeeting';
 import { DeliverableForm } from '../components/DeliverableForm';
 import { DueBadge, TaskItem, TaskQuickAdd, sortTasks } from '../components/TaskList';
@@ -20,6 +21,7 @@ export function ProjectPage() {
   const [deliverableForm, setDeliverableForm] = useState<Deliverable | 'new' | null>(null);
   const [filter, setFilter] = useState('');
   const [showDone, setShowDone] = useState(false);
+  const ask = useConfirm();
 
   const data = useLiveQuery(async () => {
     const project = await db.projects.get(id);
@@ -60,7 +62,7 @@ export function ProjectPage() {
   }
 
   async function remove() {
-    if (confirm(`¿Borrar el proyecto "${project!.name}" con todas sus reuniones, tareas y entregas? No se puede deshacer.`)) {
+    if (await ask(`Se borrará el proyecto "${project!.name}" con todas sus reuniones, tareas y entregas. No se puede deshacer.`)) {
       await deleteProject(id);
       navigate('/');
     }

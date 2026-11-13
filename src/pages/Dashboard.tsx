@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, STATUS_LABEL } from '../db';
+import { loadSampleData } from '../sample';
 import { NewMeetingDialog } from '../components/NewMeeting';
 import { ProjectForm } from '../components/ProjectForm';
 import { DueBadge, TaskItem, sortTasks } from '../components/TaskList';
@@ -44,7 +45,10 @@ export function Dashboard() {
           Crea un proyecto por cada cliente o iniciativa. Dentro podrás guardar las notas de cada reunión,
           las tareas que salgan de ellas y las fechas de entrega. Después podrás buscarlo todo por palabras clave.
         </p>
-        <button className="btn primary large" onClick={() => setNewProject(true)}>Crear mi primer proyecto</button>
+        <div className="actions center">
+          <button className="btn primary large" onClick={() => setNewProject(true)}>Crear mi primer proyecto</button>
+          <button className="btn ghost large" onClick={() => loadSampleData()}>Ver con datos de ejemplo</button>
+        </div>
         {newProject && <ProjectForm onClose={() => setNewProject(false)} onSaved={goToProject} />}
       </div>
     );

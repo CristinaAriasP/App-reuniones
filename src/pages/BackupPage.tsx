@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react';
 import { exportBackup, importBackup } from '../db';
 import { todayISO } from '../utils';
+import { useConfirm } from '../components/Confirm';
 
 export function BackupPage() {
+  const ask = useConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -20,7 +22,7 @@ export function BackupPage() {
   async function upload(file: File) {
     try {
       const data = JSON.parse(await file.text());
-      if (!confirm('Restaurar esta copia reemplazará TODOS los datos actuales. ¿Continuar?')) return;
+      if (!(await ask('Restaurar esta copia reemplazará todos los datos actuales.', 'Restaurar'))) return;
       await importBackup(data);
       setMsg({ ok: true, text: `Copia restaurada: ${data.projects.length} proyectos, ${data.meetings.length} reuniones.` });
     } catch (e) {

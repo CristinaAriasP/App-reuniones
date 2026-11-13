@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { db, STATUS_LABEL, type Deliverable, type DeliverableStatus } from '../db';
 import { todayISO } from '../utils';
 import { Modal } from './Modal';
+import { useConfirm } from './Confirm';
 
 export function DeliverableForm({ projectId, deliverable, onClose }: {
   projectId: number;
@@ -11,6 +12,7 @@ export function DeliverableForm({ projectId, deliverable, onClose }: {
   const [title, setTitle] = useState(deliverable?.title ?? '');
   const [dueDate, setDueDate] = useState(deliverable?.dueDate ?? todayISO());
   const [status, setStatus] = useState<DeliverableStatus>(deliverable?.status ?? 'pendiente');
+  const ask = useConfirm();
   const [notes, setNotes] = useState(deliverable?.notes ?? '');
 
   async function submit(e: FormEvent) {
@@ -23,7 +25,7 @@ export function DeliverableForm({ projectId, deliverable, onClose }: {
   }
 
   async function remove() {
-    if (deliverable && confirm('¿Borrar esta entrega?')) {
+    if (deliverable && await ask(`Se borrará la entrega "${deliverable.title}".`)) {
       await db.deliverables.delete(deliverable.id);
       onClose();
     }

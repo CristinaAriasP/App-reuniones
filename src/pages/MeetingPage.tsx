@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, deleteMeeting, type Meeting } from '../db';
 import { Notes } from '../components/Notes';
+import { useConfirm } from '../components/Confirm';
 import { TaskItem, TaskQuickAdd, sortTasks } from '../components/TaskList';
 import { formatLongDate, searchTerms } from '../utils';
 
@@ -11,6 +12,7 @@ export function MeetingPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const editing = params.get('editar') === '1';
+  const ask = useConfirm();
   const terms = searchTerms(params.get('q') ?? '');
 
   const data = useLiveQuery(async () => {
@@ -31,7 +33,7 @@ export function MeetingPage() {
   }
 
   async function remove() {
-    if (confirm('¿Borrar esta reunión? Sus tareas se mantendrán en el proyecto.')) {
+    if (await ask('Se borrará esta reunión. Sus tareas se mantendrán en el proyecto.')) {
       await deleteMeeting(id);
       navigate(`/proyecto/${meeting!.projectId}`);
     }
