@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { CHOICE_LABEL, db, isAnswered, type Answer, type Meeting } from '../db';
+import { CHOICE_LABEL, db, isAnswered, questionTree, type Answer, type Meeting, type Question } from '../db';
 import { formatDate } from '../utils';
 
 /** Resumen del cuestionario de un proyecto: la última respuesta a cada pregunta. */
@@ -26,7 +26,11 @@ export function ProjectAnswers({ projectId }: { projectId: number }) {
   for (const list of history.values()) list.sort((x, y) => y.m.date.localeCompare(x.m.date) || y.a.updatedAt - x.a.updatedAt);
 
   const questions = data.questions.filter((q) => !q.archived || history.has(q.id));
-  const pending = questions.filter((q) => !history.has(q.id)).length;
+  const tree = questionTree(questions);
+  // Las subpreguntas solo cuentan si la última respuesta a su pregunta principal es «Sí»
+  const lastChoice = (id: number) => history.get(id)?.[0]?.a.choice;
+  const pending = tree.reduce((n, t) => n + (history.has(t.q.id) ? 0 : 1)
+    + (lastChoice(t.q.id) === 'si' ? t.children.filter((c) => !history.has(c.id)).length : 0), 0);
 
   if (data.meetings.length === 0) {
     return <p className="empty">Cuando tengas reuniones en este proyecto, aquí verás un resumen de las respuestas del cuestionario.</p>;
@@ -39,11 +43,27 @@ export function ProjectAnswers({ projectId }: { projectId: number }) {
         {pending > 0 && <> Quedan <strong>{pending}</strong> sin responder.</>}
       </p>
       <ul className="answers-summary">
-        {questions.map((q) => {
-          const list = history.get(q.id) ?? [];
+        {tree.map(({ q, children }) => {
+          const subs = children.filter((c) => lastChoice(q.id) === 'si' || history.has(c.id));
+          return (
+            <AnswerItem key={q.id} q={q} list={history.get(q.id) ?? []}>
+              {subs.length > 0 && (
+                <ul className="answers-sub">
+                  {subs.map((c) => <AnswerItem key={c.id} q={c} list={history.get(c.id) ?? []} />)}
+                </ul>
+              )}
+            </AnswerItem>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function AnswerItem({ q, list, children }: { q: Question; list: { a: Answer; m: Meeting }[]; children?: React.ReactNode }) {
           const last = list[0];
           return (
-            <li key={q.id} className={last ? '' : 'unanswered'}>
+            <li className={last ? '' : 'unanswered'}>
               <div className="q-text">{q.text}</div>
               {last ? (
                 <>
@@ -60,10 +80,7 @@ export function ProjectAnswers({ projectId }: { projectId: number }) {
               ) : (
                 <div className="row-sub">Sin responder todavía</div>
               )}
+              {children}
             </li>
           );
-        })}
-      </ul>
-    </section>
-  );
 }

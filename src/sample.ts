@@ -32,10 +32,15 @@ export async function loadSampleData() {
       '# Comentarios del cliente\n- Les gusta la propuesta B, más limpia\n- Quieren el logo más grande en móvil\n- **Cambiar el azul por el de su manual de marca**\n\n# Dudas abiertas\n- ¿Blog en la primera fase? Lo confirman la semana que viene');
     await t(web, s, 'Aplicar colores del manual de marca', 3);
     await t(web, s, 'Confirmar si el blog entra en la fase 1', 5);
-    const q1 = await db.questions.orderBy('order').filter((q) => !q.archived).first();
-    if (q1) {
-      await db.answers.add({ meetingId: k, questionId: q1.id, projectId: web, choice: 'si', selected: q1.options.slice(0, 2), text: 'Para que sus clientes vean el estado de sus pedidos', updatedAt: now } as Answer);
-    }
+    const qs = await db.questions.filter((q) => !q.archived).toArray();
+    const ans = async (text: string, data: Pick<Answer, 'choice' | 'selected' | 'text'>) => {
+      const q = qs.find((x) => x.text === text);
+      if (q) await db.answers.add({ meetingId: k, questionId: q.id, projectId: web, ...data, updatedAt: now } as Answer);
+    };
+    await ans('¿Necesita una plataforma con inicio de sesión?', { choice: 'si', selected: ['Espacio cliente'], text: 'Para que sus clientes vean el estado de sus pedidos' });
+    await ans('¿La plataforma va dentro de la web o es externa?', { choice: '', selected: ['Integrada en la web'], text: '' });
+    await ans('¿La web va a tener tienda online?', { choice: 'si', selected: [], text: '' });
+    await ans('¿La tienda va dentro de la web o es externa?', { choice: '', selected: ['Externa (la web redirige)'], text: 'Shopify' });
     await d(web, 'Propuesta de diseño v2', 4, 'en_curso', 'Con los cambios de la revisión del día ' + day(-7));
     await d(web, 'Lanzamiento de la web', 52, 'pendiente');
     await d(web, 'Propuesta de diseño v1', -10, 'entregado');

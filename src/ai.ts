@@ -31,7 +31,8 @@ export type Organized = z.infer<typeof OrganizedSchema>;
 export interface OrganizeQuestion {
   id: number;
   text: string;
-  kind: 'sino' | 'opciones' | 'texto';
+  kind: 'sino' | 'unica' | 'opciones' | 'texto';
+  parentId?: number | null;
   options: string[];
 }
 
@@ -74,9 +75,11 @@ Responde solo con un objeto JSON con esta forma:
 function questionsBlock(qs: OrganizeQuestion[]): string {
   if (!qs.length) return '- No hay cuestionario: devuelve "answers" vacío.\n';
   const lines = qs.map((q) => {
-    const kind = q.kind === 'sino' ? 'sí/no' : q.kind === 'opciones' ? 'marcar opciones' : 'respuesta libre';
+    const kind = q.kind === 'sino' ? 'sí/no' : q.kind === 'unica' ? 'elegir UNA opción' : q.kind === 'opciones' ? 'marcar opciones' : 'respuesta libre';
     const opts = q.options.length ? `; opciones: ${q.options.map((o) => `"${o}"`).join(', ')}` : '';
-    return `  - id ${q.id}: ${q.text} (${kind}${opts})`;
+    const parent = q.parentId ? qs.find((p) => p.id === q.parentId) : undefined;
+    const dep = parent ? `; subpregunta de la id ${parent.id}: respóndela solo si esa es «si»` : '';
+    return `  - id ${q.id}: ${q.text} (${kind}${opts}${dep})`;
   });
   return `- Además, responde el cuestionario de la reunión SOLO con lo que diga el texto. Si el texto no dice nada de una pregunta, no la incluyas en "answers". Si se menciona pero no está decidido, usa choice "nose". En "selected" usa solo opciones de la lista, escritas igual; si se menciona algo que no está en la lista, ponlo en "text".
   Cuestionario:
@@ -95,7 +98,7 @@ export function cleanAnswers(o: Organized, qs: OrganizeQuestion[]): Organized['a
     const ans = {
       questionId: q.id,
       choice: q.kind === 'sino' ? a.choice : ('' as const),
-      selected: q.kind === 'texto' ? [] : a.selected.filter((s) => q.options.includes(s)),
+      selected: q.kind === 'texto' ? [] : a.selected.filter((s) => q.options.includes(s)).slice(0, q.kind === 'unica' ? 1 : undefined),
       text: [a.text.trim(), ...extra].filter(Boolean).join('. '),
     };
     if (ans.choice || ans.selected.length || ans.text) out.push(ans);
@@ -135,7 +138,9 @@ async function claudeViewerOrganizer(): Promise<Organizer | null> {
   return async (raw, ctx, opts) => {
     try {
       const data = await sample.json<unknown>(buildPrompt(raw, ctx), { signal: opts?.signal, cache: false });
-      const parsed = OrganizedSchema.safeParse(data);
+      // Si falta alguna lista, se toma como vacía
+      const lists = { sections: [], decisions: [], tasks: [], questions: [], answers: [] };
+      const parsed = OrganizedSchema.safeParse(data && typeof data === 'object' ? { ...lists, ...data } : data);
       if (!parsed.success) throw new AIError('La IA devolvió una respuesta con un formato inesperado. Prueba otra vez.');
       return parsed.data;
     } catch (e) {

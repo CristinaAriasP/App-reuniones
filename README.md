@@ -13,7 +13,7 @@ Web app para tener en un solo sitio las notas de las reuniones, las tareas y las
 - **Búsqueda por palabras clave** en todas las reuniones, tareas y entregas. No distingue mayúsculas ni tildes
   ("reunion" encuentra "Reunión") y se puede filtrar por proyecto, tipo y rango de fechas.
 - **Inicio** con próximas entregas, últimas reuniones y tareas pendientes/vencidas.
-- **Cuestionario en cada reunión**: una plantilla de preguntas (Sí/No con opciones, opciones para marcar o texto libre) que se edita en *Ajustes* y aparece en todas las reuniones. Cada proyecto tiene una pestaña con la última respuesta a cada pregunta.
+- **Cuestionario en cada reunión**: una plantilla de preguntas (Sí/No con opciones, una sola opción, varias opciones o texto libre, con subpreguntas que solo aparecen si la respuesta es «Sí») que se edita en *Ajustes* y aparece en todas las reuniones. Cada proyecto tiene una pestaña con la última respuesta a cada pregunta.
 - **Ordenar con IA**: vuelcas la lluvia de ideas de la reunión tal cual y Claude la ordena por temas, separa decisiones y dudas, y propone tareas con fecha y rellena el cuestionario con lo que se mencione. Revisas el resultado antes de guardarlo.
 - **Copia de seguridad**: exportar e importar todos los datos en un archivo `.json`.
 

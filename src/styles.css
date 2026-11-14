@@ -421,3 +421,17 @@ a.row-title:hover { color: var(--accent); }
 .icon-btn:disabled:hover { background: none; }
 .qe-form { margin: .5rem 0; padding: .9rem; border-radius: 8px; background: var(--bg); }
 .archived-q { margin-top: 1rem; }
+
+/* Subpreguntas */
+.q-sub { list-style: none; margin: .35rem 0 0; padding: 0 0 0 1rem; border-left: 2px dashed var(--border); display: flex; flex-direction: column; gap: .5rem; }
+.q-item.sub { counter-increment: none; background: var(--bg); }
+.q-item.sub .q-text::before { content: '↳'; }
+.q-options.single .opt-chip::before { content: '○'; }
+.q-options.single .opt-chip.on::before { content: '●'; }
+.qe-node { display: flex; flex-direction: column; gap: .35rem; }
+.qe-sub { list-style: none; margin: 0; padding: 0 0 0 1.5rem; display: flex; flex-direction: column; gap: .35rem; }
+.sub-mark { color: var(--muted); font-weight: 400; }
+.add-sub { align-self: flex-start; margin-left: 1.5rem; font-size: .88rem; }
+.answers-sub { list-style: none; margin: .35rem 0 0; padding: 0 0 0 1rem; border-left: 2px dashed var(--border); }
+.answers-sub li { padding: .45rem 0 .45rem .25rem; border-top: none; }
+.answers-sub .q-text { font-size: .92rem; }

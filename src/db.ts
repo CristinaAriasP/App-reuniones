@@ -44,14 +44,16 @@ export interface Deliverable {
 }
 
 /** Pregunta de la plantilla que se responde en cada reunión. */
-export type QuestionKind = 'sino' | 'opciones' | 'texto';
+export type QuestionKind = 'sino' | 'unica' | 'opciones' | 'texto';
 
 export interface Question {
   id: number;
   text: string;
   kind: QuestionKind;
-  /** sino: opciones que se despliegan si la respuesta es «Sí». opciones: lista para marcar. */
+  /** sino: opciones que se despliegan si la respuesta es «Sí». unica/opciones: lista para elegir. */
   options: string[];
+  /** Si tiene valor, es una subpregunta que solo aparece cuando esa pregunta se responde «Sí». */
+  parentId?: number | null;
   order: number;
   archived: boolean;
   createdAt: number;
@@ -74,7 +76,8 @@ export const CHOICE_LABEL: Record<Exclude<Choice, ''>, string> = { si: 'Sí', no
 
 export const KIND_LABEL: Record<QuestionKind, string> = {
   sino: 'Sí / No (con opciones si es «Sí»)',
-  opciones: 'Opciones para marcar',
+  unica: 'Una sola opción',
+  opciones: 'Varias opciones para marcar',
   texto: 'Respuesta libre',
 };
 
@@ -124,10 +127,56 @@ db.version(3).stores({}).upgrade(async (tx) => {
   await addMissingQuestions(tx.table('questions'), QUESTIONS_V3);
 });
 
+const INTEGRADA = ['Integrada en la web', 'Externa (la web redirige)'];
+
+/** v4: tienda online y plataformas con inicio de sesión, cada una con su subpregunta «¿dentro o fuera?». */
+async function applyV4(table: Dexie.Table<Question, number>) {
+  const all = await table.toArray();
+  const find = (t: string) => all.find((q) => q.text.trim().toLowerCase() === t.toLowerCase());
+  let order = all.reduce((m, q) => Math.max(m, q.order), 0);
+
+  // La antigua «plataforma interna» pasa a ser «plataforma con inicio de sesión» (puede ser interna o externa)
+  const platform = find('¿Necesita plataforma interna?') ?? find('¿Necesita una plataforma con inicio de sesión?');
+  if (platform) {
+    if (platform.text === '¿Necesita plataforma interna?') {
+      const options = [...platform.options];
+      for (const o of ['Espacio cliente', 'Plataforma de aprendizaje']) if (!options.includes(o)) options.push(o);
+      await table.update(platform.id, { text: '¿Necesita una plataforma con inicio de sesión?', options });
+    }
+    if (!find('¿La plataforma va dentro de la web o es externa?')) {
+      await table.add({ text: '¿La plataforma va dentro de la web o es externa?', kind: 'unica', options: INTEGRADA,
+        parentId: platform.id, order: ++order, archived: false, createdAt: 0 } as Question);
+    }
+  }
+  if (!find('¿La web va a tener tienda online?')) {
+    const shopId = await table.add({ text: '¿La web va a tener tienda online?', kind: 'sino', options: [],
+      parentId: null, order: ++order, archived: false, createdAt: 0 } as unknown as Question);
+    await table.add({ text: '¿La tienda va dentro de la web o es externa?', kind: 'unica', options: INTEGRADA,
+      parentId: shopId as number, order: ++order, archived: false, createdAt: 0 } as Question);
+  }
+}
+
+db.version(4).stores({}).upgrade(async (tx) => {
+  await applyV4(tx.table('questions'));
+});
+
 db.on('populate', async (tx) => {
   await tx.table('questions').bulkAdd(DEFAULT_QUESTIONS);
   await addMissingQuestions(tx.table('questions'), QUESTIONS_V3);
+  await applyV4(tx.table('questions'));
 });
+
+export interface QuestionNode { q: Question; children: Question[] }
+
+/**
+ * Agrupa las preguntas (ya ordenadas) en principales y subpreguntas.
+ * Una subpregunta cuya pregunta principal ya no existe se muestra como principal.
+ */
+export function questionTree(questions: Question[]): QuestionNode[] {
+  const ids = new Set(questions.map((q) => q.id));
+  const top = questions.filter((q) => !q.parentId || !ids.has(q.parentId));
+  return top.map((q) => ({ q, children: questions.filter((c) => c.parentId === q.id) }));
+}
 
 /** Una respuesta cuenta como contestada si tiene algo. */
 export function isAnswered(a: Answer | undefined): boolean {
