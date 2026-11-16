@@ -166,6 +166,72 @@ db.on('populate', async (tx) => {
   await applyV4(tx.table('questions'));
 });
 
+/** Vuelve a crear la plantilla de preguntas por defecto (p. ej. tras cerrar sesión). */
+export async function seedDefaultQuestions() {
+  await db.transaction('rw', db.questions, async () => {
+    if (await db.questions.count()) return;
+    await db.questions.bulkAdd(DEFAULT_QUESTIONS as Question[]);
+    const table = db.table('questions') as Dexie.Table<Question, number>;
+    await addMissingQuestions(table, QUESTIONS_V3);
+    await applyV4(table);
+  });
+}
+
+// ---------- Identificadores y aviso de cambios (para la sincronización) ----------
+
+export const TABLES = ['projects', 'meetings', 'tasks', 'deliverables', 'questions', 'answers'] as const;
+export type TableName = (typeof TABLES)[number];
+
+/** Por encima de este valor, un id es de los nuevos (único entre dispositivos). */
+export const UNIQUE_ID_MIN = 1e12;
+let lastId = 0;
+/**
+ * Id numérico único entre dispositivos: milisegundos × 1000 + azar.
+ * Así dos dispositivos que crean cosas a la vez (o sin conexión) no chocan.
+ */
+export function uniqueId(): number {
+  const base = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+  lastId = Math.max(base, lastId + 1);
+  return lastId;
+}
+
+export interface SyncTarget {
+  push(table: TableName, obj: { id: number }): void;
+  remove(table: TableName, id: number): void;
+}
+let syncTarget: SyncTarget | null = null;
+export function setSyncTarget(t: SyncTarget | null) { syncTarget = t; }
+
+/** Marca una transacción como «viene de la nube», para no volver a subirla. */
+export const REMOTE_FLAG = '__fromRemote';
+const isRemote = (tx: unknown) => !!(tx as Record<string, unknown> | undefined)?.[REMOTE_FLAG];
+
+for (const name of TABLES) {
+  const table = db.table(name);
+  table.hook('creating', function (_pk, obj, tx) {
+    if (obj.id == null) obj.id = uniqueId();
+    const target = syncTarget;
+    if (target && !isRemote(tx)) this.onsuccess = () => target.push(name, obj);
+    return obj.id;
+  });
+  table.hook('updating', function (_mods, _pk, _obj, tx) {
+    const target = syncTarget;
+    if (target && !isRemote(tx)) this.onsuccess = (updated) => target.push(name, updated);
+  });
+  table.hook('deleting', function (pk, _obj, tx) {
+    const target = syncTarget;
+    if (target && !isRemote(tx)) this.onsuccess = () => target.remove(name, pk as number);
+  });
+}
+
+/** Ejecuta cambios que vienen de la nube sin que se vuelvan a subir. */
+export async function applyFromRemote(fn: () => Promise<void>) {
+  await db.transaction('rw', TABLES.map((n) => db.table(n)), async (tx) => {
+    (tx as unknown as Record<string, boolean>)[REMOTE_FLAG] = true;
+    await fn();
+  });
+}
+
 export interface QuestionNode { q: Question; children: Question[] }
 
 /**

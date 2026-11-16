@@ -9,15 +9,27 @@ import { ProjectPage } from './pages/ProjectPage';
 import { MeetingPage } from './pages/MeetingPage';
 import { SearchPage } from './pages/SearchPage';
 import { BackupPage } from './pages/BackupPage';
+import { AuthProvider, LoginScreen, useAuth } from './auth';
+import { useConfirm } from './components/Confirm';
 
 export default function App() {
   return (
     <HashRouter>
       <ConfirmProvider>
-        <Layout />
+        <AuthProvider>
+          <Gate />
+        </AuthProvider>
       </ConfirmProvider>
     </HashRouter>
   );
+}
+
+/** Si la app está conectada a Firebase, pide iniciar sesión (o seguir sin cuenta) antes de entrar. */
+function Gate() {
+  const { mode, localOnly, chooseLocalOnly } = useAuth();
+  if (mode === 'loading') return <div className="splash"><span className="thinking">Cargando…</span></div>;
+  if (mode === 'signedOut' && !localOnly) return <LoginScreen onSkip={() => chooseLocalOnly(true)} />;
+  return <Layout />;
 }
 
 function Layout() {
@@ -113,6 +125,7 @@ function Sidebar() {
         )}
       </div>
 
+      <AccountBox />
       <nav className="nav sidebar-bottom">
         <NavLink to="/ajustes">⚙️ Ajustes y copia</NavLink>
       </nav>
@@ -121,5 +134,40 @@ function Sidebar() {
         <ProjectForm onClose={() => setCreating(false)} onSaved={(id) => navigate(`/proyecto/${id}`)} />
       )}
     </aside>
+  );
+}
+
+const SYNC_LABEL = { syncing: 'Sincronizando…', ok: 'Guardado en la nube', offline: 'Sin conexión: se subirá al volver', error: 'Error al sincronizar' };
+
+function AccountBox() {
+  const { mode, user, sync, syncError, chooseLocalOnly, logout } = useAuth();
+  const ask = useConfirm();
+  if (mode === 'disabled') return null;
+  if (mode === 'signedOut') {
+    return (
+      <div className="account-box">
+        <p className="muted small">Tus datos solo están en este navegador.</p>
+        <button className="btn primary small full" onClick={() => chooseLocalOnly(false)}>Iniciar sesión</button>
+      </div>
+    );
+  }
+  if (mode !== 'signedIn' || !user) return null;
+  return (
+    <div className="account-box">
+      <div className="account-user">
+        {user.photoURL
+          ? <img src={user.photoURL} alt="" className="avatar" referrerPolicy="no-referrer" />
+          : <span className="avatar initials" aria-hidden="true">{(user.displayName || user.email || '?')[0].toUpperCase()}</span>}
+        <div className="grow">
+          <div className="account-name">{user.displayName || user.email}</div>
+          <div className={`sync-state ${sync ?? 'syncing'}`} title={syncError || undefined}>
+            <span className="sync-dot" /> {sync ? SYNC_LABEL[sync] : SYNC_LABEL.syncing}
+          </div>
+        </div>
+      </div>
+      <button className="link-btn small" onClick={async () => {
+        if (await ask('Se cerrará la sesión y se borrarán los datos de este navegador. Seguirán guardados en tu cuenta.', 'Cerrar sesión')) await logout();
+      }}>Cerrar sesión</button>
+    </div>
   );
 }
