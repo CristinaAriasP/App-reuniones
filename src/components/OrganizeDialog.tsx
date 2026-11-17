@@ -5,6 +5,7 @@ import { formatDate } from '../utils';
 import { CHOICE_LABEL } from '../db';
 import { Modal } from './Modal';
 import { Notes } from './Notes';
+import { LIMITS } from '../validation';
 
 export interface OrganizeApply {
   notes: string;
@@ -84,7 +85,7 @@ export function OrganizeDialog({ initialText, ctx, currentTitle, answeredIds, on
   const close = () => { ctl.current?.abort(); onClose(); };
 
   return (
-    <Modal title="✨ Ordenar con IA" onClose={close} wide>
+    <Modal title="Ordenar con IA" onClose={close} wide>
       {mode === null && (
         <div className="notice info">
           {isInClaudeViewer()
@@ -98,6 +99,7 @@ export function OrganizeDialog({ initialText, ctx, currentTitle, answeredIds, on
           <label>
             Pega o escribe tu lluvia de ideas, tal cual salió
             <textarea
+              maxLength={LIMITS.notes}
               className="brainstorm-input"
               value={raw}
               onChange={(e) => setRaw(e.target.value)}
@@ -109,8 +111,9 @@ export function OrganizeDialog({ initialText, ctx, currentTitle, answeredIds, on
           {error && <p className="notice error">{error}</p>}
           <div className="form-actions">
             <span className="muted small">
-              {mode === 'claude' && 'Usa tu cuenta de Claude. Te pedirá permiso la primera vez.'}
-              {mode === 'apikey' && 'Usa tu clave de API de Anthropic.'}
+              Al pulsar «Ordenar», este texto se envía a Claude (Anthropic).
+              {mode === 'claude' && ' Usa tu cuenta de Claude; te pedirá permiso la primera vez.'}
+              {mode === 'apikey' && ' Usa tu clave de API de Anthropic.'}
             </span>
             <span className="spacer" />
             {phase === 'working' ? (

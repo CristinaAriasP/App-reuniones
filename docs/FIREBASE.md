@@ -84,7 +84,24 @@ Los datos del enlace de Claude están guardados en ese navegador. Para llevarlos
 
 (Si antes usabas la app sin cuenta en el mismo navegador, no hace falta: al iniciar sesión por primera vez, lo que hubiera se sube solo.)
 
-## 7. La IA fuera de Claude
+## 7. Que solo puedas entrar tú (importante)
+
+La app es para ti sola. Una vez creada tu cuenta (paso 5), cierra la puerta a cuentas nuevas:
+
+1. **Authentication → Configuración → Acciones del usuario** → desmarca **Habilitar la creación (registro)** → Guardar.
+2. En esa misma pantalla, comprueba que está activada la **Protección contra la enumeración de correos electrónicos**
+   (viene activada en los proyectos nuevos). Evita que alguien averigüe qué emails tienen cuenta.
+3. **Compruébalo:** abre la app en una ventana privada del navegador e intenta crear una cuenta con otro email
+   (o entrar con otra cuenta de Google). Debe salir «En esta app no se pueden crear cuentas nuevas».
+   Si no sale, revisa el paso 1.
+
+Aunque alguien consiguiera crear una cuenta, no podría ver tus datos: las reglas de Firestore solo dejan a cada cuenta acceder a lo suyo.
+Este paso evita además que alguien use tu proyecto para guardar sus propias cosas.
+
+Firebase ya limita los intentos de inicio de sesión fallidos («Demasiados intentos. Espera unos minutos») y guarda las contraseñas cifradas;
+la app nunca ve ni guarda tu contraseña.
+
+## 8. La IA fuera de Claude
 
 En la versión de Firebase, «Ordenar con IA» usa una clave de API de Anthropic. Créala en <https://console.anthropic.com>
 y pégala en **⚙️ Ajustes y copia → Inteligencia artificial**. Se guarda solo en ese navegador.
@@ -95,7 +112,11 @@ y pégala en **⚙️ Ajustes y copia → Inteligencia artificial**. Se guarda s
 
 - **Inicio de sesión:** Firebase Authentication (Google o email y contraseña).
 - **Datos:** Firestore, en `users/{tu id}/{projects|meetings|tasks|deliverables|questions|answers}`.
-- **Seguridad:** `firestore.rules` solo deja leer y escribir a la persona dueña de cada carpeta `users/{id}`.
+- **Seguridad:** `firestore.rules` solo deja leer y escribir a la persona dueña de cada carpeta `users/{id}`,
+  y comprueba cada dato que se guarda (campos permitidos, tipo y tamaño máximo).
+- **Cabeceras de seguridad** (en `firebase.json`): HTTPS obligatorio (HSTS), política de contenido (CSP) que solo permite
+  cargar código de la propia app y hablar con Firebase y Anthropic, prohibición de mostrar la app dentro de otras webs
+  y aviso a los buscadores para que no la indexen (es privada).
 - **Sin conexión:** la app sigue funcionando; los cambios se suben cuando vuelve internet.
   El punto de color junto a tu nombre indica el estado: verde (guardado en la nube), naranja (sin conexión), rojo (error).
 - **Varios dispositivos:** los cambios aparecen en los demás en unos segundos.

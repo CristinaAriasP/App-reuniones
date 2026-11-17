@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { answerText, db, STATUS_LABEL } from '../db';
 import { formatDate, highlight, matchesAll, searchTerms, snippet } from '../utils';
+import { safeColor } from '../validation';
 
 type Kind = 'todo' | 'reuniones' | 'tareas' | 'entregas';
 
@@ -65,7 +66,7 @@ export function SearchPage() {
 
   const ProjectTag = ({ pid }: { pid: number }) => {
     const p = projectById.get(pid);
-    return p ? <span className="chip" style={{ '--c': p.color } as React.CSSProperties}>{p.company ? `${p.company} · ` : ''}{p.name}</span> : null;
+    return p ? <span className="chip" style={{ '--c': safeColor(p.color) } as React.CSSProperties}>{p.company ? `${p.company} · ` : ''}{p.name}</span> : null;
   };
 
   return (
@@ -75,6 +76,7 @@ export function SearchPage() {
         <input
           type="search"
           autoFocus
+          maxLength={200}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Palabras clave: presupuesto, Ana, diseño…"
@@ -118,10 +120,10 @@ export function SearchPage() {
                 <span className="muted small">{formatDate(m.date)}</span>
               </div>
               <ProjectTag pid={m.projectId} />
-              {m.attendees && <div className="row-sub">👥 {highlight(m.attendees, terms)}</div>}
+              {m.attendees && <div className="row-sub"><span aria-hidden="true">👥</span><span className="sr-only">Asistentes:</span> {highlight(m.attendees, terms)}</div>}
               {m.notes && <p className="excerpt">{highlight(snippet(m.notes, terms), terms)}</p>}
               {terms.length > 0 && !matchesAll(`${m.title} ${m.attendees} ${m.notes}`, terms) && all.answersByMeeting.get(m.id) && (
-                <p className="excerpt">📋 {highlight(snippet(all.answersByMeeting.get(m.id)!, terms), terms)}</p>
+                <p className="excerpt"><span aria-hidden="true">📋</span> {highlight(snippet(all.answersByMeeting.get(m.id)!, terms), terms)}</p>
               )}
             </Link>
           ))}
@@ -136,7 +138,7 @@ export function SearchPage() {
             return (
               <Link key={t.id} to={m ? `/reunion/${m.id}` : `/proyecto/${t.projectId}?tab=tareas`} className={'result' + (t.done ? ' done' : '')}>
                 <div className="result-head">
-                  <span className="row-title">{t.done ? '☑' : '☐'} {highlight(t.title, terms)}</span>
+                  <span className="row-title"><span aria-hidden="true">{t.done ? '☑' : '☐'}</span><span className="sr-only">{t.done ? 'Hecha:' : 'Pendiente:'}</span> {highlight(t.title, terms)}</span>
                   {t.dueDate && <span className="muted small">Límite: {formatDate(t.dueDate)}</span>}
                 </div>
                 <ProjectTag pid={t.projectId} />

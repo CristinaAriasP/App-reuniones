@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { CHOICE_LABEL, db, isAnswered, questionTree, saveAnswer, type Answer, type Choice, type Meeting, type Question, type QuestionNode } from '../db';
+import { LIMITS } from '../validation';
 
 /**
  * Preguntas de una reunión: las activas, más las retiradas que ya tengan respuesta.
@@ -148,9 +149,9 @@ function QuestionBody({ q, answer, meeting }: { q: Question; answer?: Answer; me
       )}
 
       {q.kind === 'texto' ? (
-        <textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="Respuesta…" aria-label={`Respuesta a: ${q.text}`} />
+        <textarea rows={2} maxLength={LIMITS.description} value={text} onChange={(e) => setText(e.target.value)} placeholder="Respuesta…" aria-label={`Respuesta a: ${q.text}`} />
       ) : (
-        <input className="q-note" value={text} onChange={(e) => setText(e.target.value)}
+        <input className="q-note" maxLength={LIMITS.description} value={text} onChange={(e) => setText(e.target.value)}
           placeholder={q.kind === 'unica' ? 'Comentario (p. ej. qué plataforma: Shopify, Moodle…)' : 'Comentario (opcional)…'}
           aria-label={`Comentario sobre: ${q.text}`} />
       )}

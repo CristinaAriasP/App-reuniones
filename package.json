@@ -12,10 +12,10 @@
     "emulators": "firebase emulators:start --only auth,firestore --project demo-reuniones"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.8.0",
+    "@anthropic-ai/sdk": "^1.9.0",
     "dexie": "^4.4.7",
     "dexie-react-hooks": "^4.4.0",
-    "firebase": "^13.3.0",
+    "firebase": "^13.4.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.5",
@@ -28,5 +28,8 @@
     "firebase-tools": "^15.36.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.8"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.7"
   }
 }

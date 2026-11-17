@@ -9,6 +9,7 @@ import { NewMeetingDialog } from '../components/NewMeeting';
 import { DeliverableForm } from '../components/DeliverableForm';
 import { DueBadge, TaskItem, TaskQuickAdd, sortTasks } from '../components/TaskList';
 import { formatDate, highlight, matchesAll, monthLabel, searchTerms, snippet } from '../utils';
+import { safeColor } from '../validation';
 
 type Tab = 'reuniones' | 'cuestionario' | 'tareas' | 'entregas';
 
@@ -71,7 +72,7 @@ export function ProjectPage() {
 
   return (
     <div className="page">
-      <div className="project-head" style={{ '--c': project.color } as React.CSSProperties}>
+      <div className="project-head" style={{ '--c': safeColor(project.color) } as React.CSSProperties}>
         <div>
           {project.company && <p className="eyebrow">{project.company}</p>}
           <h1>
@@ -107,7 +108,7 @@ export function ProjectPage() {
       {tab === 'reuniones' && (
         <section>
           <div className="toolbar">
-            <input type="search" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filtrar reuniones de este proyecto…" />
+            <input type="search" maxLength={200} value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filtrar reuniones de este proyecto…" />
             <button className="btn primary" onClick={() => setNewMeeting(true)}>＋ Nueva reunión</button>
           </div>
           {meetings.length === 0 && <p className="empty">Todavía no hay reuniones en este proyecto.</p>}
@@ -126,10 +127,10 @@ export function ProjectPage() {
                       </div>
                       <div className="grow">
                         <div className="row-title">{highlight(m.title || 'Reunión', terms)}</div>
-                        {m.attendees && <div className="row-sub">👥 {highlight(m.attendees, terms)}</div>}
+                        {m.attendees && <div className="row-sub"><span aria-hidden="true">👥</span><span className="sr-only">Asistentes:</span> {highlight(m.attendees, terms)}</div>}
                         {m.notes && <p className="excerpt">{highlight(snippet(m.notes, terms, 110), terms)}</p>}
                         {mTasks.length > 0 && (
-                          <div className="row-sub">✓ {mTasks.filter((t) => t.done).length}/{mTasks.length} tareas</div>
+                          <div className="row-sub"><span aria-hidden="true">✓</span> {mTasks.filter((t) => t.done).length}/{mTasks.length} tareas</div>
                         )}
                       </div>
                     </Link>

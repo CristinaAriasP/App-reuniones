@@ -1,12 +1,112 @@
 rules_version = '2';
 
-// Cada persona solo puede leer y escribir sus propios datos: users/{su uid}/...
-// Nadie más (ni otros usuarios ni visitantes sin sesión) puede acceder a ellos.
+// =====================================================================
+// Reglas de seguridad de Firestore
+//
+// 1. Cada persona solo puede leer y escribir sus propios datos: users/{su uid}/...
+//    Nadie más (ni otras cuentas ni visitantes sin sesión) puede acceder a ellos.
+// 2. Cada documento se valida al escribirlo: solo los campos esperados,
+//    con su tipo y un tamaño máximo. Así, aunque alguien manipulara la app,
+//    no podría guardar datos con otra forma ni ocupar espacio sin límite.
+// =====================================================================
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{uid}/{collection}/{docId} {
-      allow read, write: if request.auth != null && request.auth.uid == uid
-        && collection in ['projects', 'meetings', 'tasks', 'deliverables', 'questions', 'answers'];
+
+    // ---------- Comprobaciones comunes ----------
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
     }
+
+    function d() {
+      return request.resource.data;
+    }
+
+    // El id guardado dentro del documento coincide con el nombre del documento
+    function idMatches(docId) {
+      return d().id is int && string(d().id) == docId;
+    }
+
+    function str(field, max) {
+      return d()[field] is string && d()[field].size() <= max;
+    }
+
+    function optInt(field) {
+      return !(field in d()) || d()[field] == null || d()[field] is int;
+    }
+
+    function isDate(field, allowEmpty) {
+      return d()[field] is string
+        && ((allowEmpty && d()[field] == '') || d()[field].matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'));
+    }
+
+    function stringList(field, maxItems) {
+      return d()[field] is list && d()[field].size() <= maxItems;
+    }
+
+    // ---------- Validación por tipo de documento ----------
+
+    function validProject() {
+      return d().keys().hasOnly(['id', 'name', 'company', 'color', 'description', 'archived', 'createdAt'])
+        && str('name', 200) && str('company', 200) && str('description', 5000)
+        && d().color is string && d().color.matches('^#[0-9a-fA-F]{6}$')
+        && d().archived is bool && d().createdAt is int;
+    }
+
+    function validMeeting() {
+      return d().keys().hasOnly(['id', 'projectId', 'date', 'title', 'attendees', 'notes', 'createdAt', 'updatedAt'])
+        && d().projectId is int && isDate('date', false)
+        && str('title', 300) && str('attendees', 1000) && str('notes', 200000)
+        && d().createdAt is int && d().updatedAt is int;
+    }
+
+    function validTask() {
+      return d().keys().hasOnly(['id', 'projectId', 'meetingId', 'title', 'dueDate', 'done', 'createdAt'])
+        && d().projectId is int && optInt('meetingId')
+        && str('title', 500) && isDate('dueDate', true)
+        && (d().done == 0 || d().done == 1) && d().createdAt is int;
+    }
+
+    function validDeliverable() {
+      return d().keys().hasOnly(['id', 'projectId', 'title', 'dueDate', 'status', 'notes', 'createdAt'])
+        && d().projectId is int && str('title', 500) && isDate('dueDate', false)
+        && d().status in ['pendiente', 'en_curso', 'entregado']
+        && str('notes', 5000) && d().createdAt is int;
+    }
+
+    function validQuestion() {
+      return d().keys().hasOnly(['id', 'text', 'kind', 'options', 'parentId', 'order', 'archived', 'createdAt'])
+        && str('text', 500) && d().kind in ['sino', 'unica', 'opciones', 'texto']
+        && stringList('options', 50) && optInt('parentId')
+        && (d().order is int || d().order is float) && d().archived is bool && d().createdAt is int;
+    }
+
+    function validAnswer() {
+      return d().keys().hasOnly(['id', 'meetingId', 'questionId', 'projectId', 'choice', 'selected', 'text', 'updatedAt'])
+        && d().meetingId is int && d().questionId is int && d().projectId is int
+        && d().choice in ['', 'si', 'no', 'nose']
+        && stringList('selected', 50) && str('text', 5000) && d().updatedAt is int;
+    }
+
+    function validDoc(collection, docId) {
+      return idMatches(docId) && (
+        (collection == 'projects' && validProject())
+        || (collection == 'meetings' && validMeeting())
+        || (collection == 'tasks' && validTask())
+        || (collection == 'deliverables' && validDeliverable())
+        || (collection == 'questions' && validQuestion())
+        || (collection == 'answers' && validAnswer())
+      );
+    }
+
+    // ---------- Acceso ----------
+
+    match /users/{uid}/{collection}/{docId} {
+      allow read, delete: if isOwner(uid)
+        && collection in ['projects', 'meetings', 'tasks', 'deliverables', 'questions', 'answers'];
+      allow create, update: if isOwner(uid) && validDoc(collection, docId);
+    }
+
+    // Cualquier otra ruta queda cerrada (Firestore deniega por defecto lo que no se permite arriba)
   }
 }

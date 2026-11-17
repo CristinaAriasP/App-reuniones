@@ -2,8 +2,11 @@ import { useState, type FormEvent } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, KIND_LABEL, questionTree, type Question, type QuestionKind } from '../db';
 import { useConfirm } from './Confirm';
+import { LIMITS } from '../validation';
 
-const parseOptions = (s: string) => s.split(',').map((o) => o.trim()).filter(Boolean);
+// Opciones separadas por comas, sin repetir y dentro de los límites
+const parseOptions = (s: string) =>
+  [...new Set(s.split(',').map((o) => o.trim().slice(0, LIMITS.shortText)).filter(Boolean))].slice(0, LIMITS.options);
 
 type FormData = { text: string; kind: QuestionKind; options: string[]; parentId: number | null };
 
@@ -55,7 +58,7 @@ export function QuestionsEditor() {
 
   return (
     <section className="card">
-      <h2>📋 Preguntas de las reuniones</h2>
+      <h2><span aria-hidden="true">📋</span> Preguntas de las reuniones</h2>
       <p className="muted">
         Estas preguntas aparecen en todas las reuniones para que no se olvide preguntar nada.
         Una pregunta de Sí / No puede tener <strong>subpreguntas</strong>, que solo aparecen si se responde «Sí».
@@ -171,7 +174,7 @@ function QuestionForm({ initial, parents, initialParent, canHaveParent, onSave, 
     <form className="form qe-form" onSubmit={submit}>
       <label>
         Pregunta
-        <input autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="Ej. ¿La tienda va dentro de la web o es externa?" required />
+        <input autoFocus maxLength={LIMITS.shortText} value={text} onChange={(e) => setText(e.target.value)} placeholder="Ej. ¿La tienda va dentro de la web o es externa?" required />
       </label>
       <div className="form-row">
         <label>
@@ -194,7 +197,7 @@ function QuestionForm({ initial, parents, initialParent, canHaveParent, onSave, 
       {kind !== 'texto' && (
         <label>
           {optionsLabel}
-          <input value={options} onChange={(e) => setOptions(e.target.value)} placeholder="Integrada en la web, Externa (la web redirige)" />
+          <input maxLength={5000} value={options} onChange={(e) => setOptions(e.target.value)} placeholder="Integrada en la web, Externa (la web redirige)" />
         </label>
       )}
       <div className="form-actions">

@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
+import { BackupSchema } from './validation';
 
 export interface Project {
   id: number;
@@ -278,6 +279,12 @@ export const PROJECT_COLORS = [
   '#4f46e5', '#0891b2', '#059669', '#ca8a04', '#ea580c', '#dc2626', '#db2777', '#7c3aed', '#475569',
 ];
 
+/** Nombre de cada color, para lectores de pantalla. */
+export const COLOR_NAMES: Record<string, string> = {
+  '#4f46e5': 'Añil', '#0891b2': 'Turquesa', '#059669': 'Verde', '#ca8a04': 'Mostaza', '#ea580c': 'Naranja',
+  '#dc2626': 'Rojo', '#db2777': 'Rosa', '#7c3aed': 'Violeta', '#475569': 'Gris',
+};
+
 export async function deleteProject(id: number) {
   await db.transaction('rw', [db.projects, db.meetings, db.tasks, db.deliverables, db.answers], async () => {
     await db.answers.where('projectId').equals(id).delete();
@@ -323,10 +330,13 @@ export async function exportBackup(): Promise<Backup> {
   return { app: 'app-reuniones', version: 2, exportedAt: new Date().toISOString(), projects, meetings, tasks, deliverables, questions, answers };
 }
 
-export async function importBackup(data: Backup) {
-  if (data?.app !== 'app-reuniones' || !Array.isArray(data.projects)) {
-    throw new Error('El archivo no es una copia de seguridad válida de esta app.');
+export async function importBackup(raw: unknown) {
+  // Se comprueba todo el archivo antes de tocar nada: campos, tipos y tamaños
+  const parsed = BackupSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error('El archivo no es una copia de seguridad válida de esta app, o está dañado. No se ha cambiado nada.');
   }
+  const data = parsed.data as unknown as Backup;
   await db.transaction('rw', [db.projects, db.meetings, db.tasks, db.deliverables, db.questions, db.answers], async () => {
     await Promise.all([db.projects.clear(), db.meetings.clear(), db.tasks.clear(), db.deliverables.clear(), db.answers.clear()]);
     // Las copias antiguas no traen preguntas: se conserva la plantilla actual

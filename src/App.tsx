@@ -9,18 +9,23 @@ import { ProjectPage } from './pages/ProjectPage';
 import { MeetingPage } from './pages/MeetingPage';
 import { SearchPage } from './pages/SearchPage';
 import { BackupPage } from './pages/BackupPage';
+import { PrivacyPage } from './pages/PrivacyPage';
 import { AuthProvider, LoginScreen, useAuth } from './auth';
 import { useConfirm } from './components/Confirm';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { safeColor } from './validation';
 
 export default function App() {
   return (
-    <HashRouter>
-      <ConfirmProvider>
-        <AuthProvider>
-          <Gate />
-        </AuthProvider>
-      </ConfirmProvider>
-    </HashRouter>
+    <ErrorBoundary>
+      <HashRouter>
+        <ConfirmProvider>
+          <AuthProvider>
+            <Gate />
+          </AuthProvider>
+        </ConfirmProvider>
+      </HashRouter>
+    </ErrorBoundary>
   );
 }
 
@@ -43,13 +48,16 @@ function Layout() {
 
   return (
     <div className={'layout' + (menuOpen ? ' menu-open' : '')}>
+      <a className="skip-link" href="#contenido" onClick={(e) => { e.preventDefault(); document.getElementById('contenido')?.focus(); }}>
+        Saltar al contenido
+      </a>
       <header className="topbar">
-        <button className="icon-btn" onClick={() => setMenuOpen((o) => !o)} aria-label="Menú">☰</button>
-        <span className="brand">🗂️ Reuniones</span>
+        <button className="icon-btn" onClick={() => setMenuOpen((o) => !o)} aria-label="Menú" aria-expanded={menuOpen}>☰</button>
+        <span className="brand"><span aria-hidden="true">🗂️</span> Reuniones</span>
       </header>
       <Sidebar />
       <div className="scrim" onClick={() => setMenuOpen(false)} />
-      <main className="main">
+      <main className="main" id="contenido" tabIndex={-1}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/proyecto/:id" element={<ProjectPage />} />
@@ -57,6 +65,7 @@ function Layout() {
           <Route path="/buscar" element={<SearchPage />} />
           <Route path="/ajustes" element={<BackupPage />} />
           <Route path="/copia" element={<BackupPage />} />
+          <Route path="/privacidad" element={<PrivacyPage />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </main>
@@ -90,13 +99,13 @@ function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <div className="brand desktop-only">🗂️ Reuniones</div>
+      <div className="brand desktop-only"><span aria-hidden="true">🗂️</span> Reuniones</div>
       <form onSubmit={search} className="sidebar-search">
-        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar en todo…" aria-label="Buscar" />
+        <input type="search" maxLength={200} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar en todo…" aria-label="Buscar" />
       </form>
       <nav className="nav">
-        <NavLink to="/" end>🏠 Inicio</NavLink>
-        <NavLink to="/buscar">🔎 Búsqueda</NavLink>
+        <NavLink to="/" end><span aria-hidden="true">🏠</span> Inicio</NavLink>
+        <NavLink to="/buscar"><span aria-hidden="true">🔎</span> Búsqueda</NavLink>
       </nav>
 
       <div className="sidebar-section">
@@ -112,7 +121,7 @@ function Sidebar() {
             <div className="company-name">{company}</div>
             {list.sort((a, b) => a.name.localeCompare(b.name, 'es')).map((p) => (
               <NavLink key={p.id} to={`/proyecto/${p.id}`} className={p.archived ? 'archived' : ''}>
-                <span className="dot" style={{ background: p.color }} />
+                <span className="dot" style={{ background: safeColor(p.color) }} />
                 {p.name}
               </NavLink>
             ))}
@@ -127,7 +136,8 @@ function Sidebar() {
 
       <AccountBox />
       <nav className="nav sidebar-bottom">
-        <NavLink to="/ajustes">⚙️ Ajustes y copia</NavLink>
+        <NavLink to="/ajustes"><span aria-hidden="true">⚙️</span> Ajustes y copia</NavLink>
+        <NavLink to="/privacidad">Privacidad y datos</NavLink>
       </nav>
 
       {creating && (
@@ -155,9 +165,8 @@ function AccountBox() {
   return (
     <div className="account-box">
       <div className="account-user">
-        {user.photoURL
-          ? <img src={user.photoURL} alt="" className="avatar" referrerPolicy="no-referrer" />
-          : <span className="avatar initials" aria-hidden="true">{(user.displayName || user.email || '?')[0].toUpperCase()}</span>}
+        {/* Iniciales en lugar de la foto de Google: así no se carga nada de servidores externos */}
+        <span className="avatar initials" aria-hidden="true">{(user.displayName || user.email || '?')[0].toUpperCase()}</span>
         <div className="grow">
           <div className="account-name">{user.displayName || user.email}</div>
           <div className={`sync-state ${sync ?? 'syncing'}`} title={syncError || undefined}>

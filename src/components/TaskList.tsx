@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { db, type Meeting, type Project, type Task } from '../db';
 import { formatDate, relativeDue } from '../utils';
+import { LIMITS, safeColor } from '../validation';
 
 export function DueBadge({ date, done }: { date: string; done?: boolean }) {
   if (!date) return null;
@@ -23,7 +24,7 @@ export function TaskQuickAdd({ projectId, meetingId = null }: { projectId: numbe
 
   return (
     <form className="quick-add" onSubmit={submit}>
-      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Añadir tarea…" aria-label="Nueva tarea" />
+      <input maxLength={LIMITS.shortText} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Añadir tarea…" aria-label="Nueva tarea" />
       <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} aria-label="Fecha límite" />
       <button className="btn primary" type="submit" disabled={!title.trim()}>Añadir</button>
     </form>
@@ -51,7 +52,7 @@ export function TaskItem({ task, project, meeting, showProject }: {
     return (
       <li className="task editing">
         <form className="quick-add" onSubmit={save}>
-          <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} />
+          <input autoFocus maxLength={LIMITS.shortText} value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Tarea" />
           <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           <button className="btn primary" type="submit">Guardar</button>
           <button className="btn ghost" type="button" onClick={() => setEditing(false)}>Cancelar</button>
@@ -72,7 +73,7 @@ export function TaskItem({ task, project, meeting, showProject }: {
         <span className="task-title">{task.title}</span>
         <span className="task-meta">
           {showProject && project && (
-            <Link to={`/proyecto/${project.id}`} className="chip" style={{ '--c': project.color } as React.CSSProperties}>{project.name}</Link>
+            <Link to={`/proyecto/${project.id}`} className="chip" style={{ '--c': safeColor(project.color) } as React.CSSProperties}>{project.name}</Link>
           )}
           {meeting && <Link to={`/reunion/${meeting.id}`} className="muted-link">De: {meeting.title || 'Reunión'} · {formatDate(meeting.date)}</Link>}
         </span>

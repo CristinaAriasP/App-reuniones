@@ -8,6 +8,7 @@ import { Questionnaire, useMeetingQuestionnaire } from '../components/Questionna
 import { useConfirm } from '../components/Confirm';
 import { TaskItem, TaskQuickAdd, sortTasks } from '../components/TaskList';
 import { formatLongDate, searchTerms } from '../utils';
+import { LIMITS, safeColor } from '../validation';
 
 export function MeetingPage() {
   const id = Number(useParams().id);
@@ -46,7 +47,7 @@ export function MeetingPage() {
       <nav className="breadcrumb">
         {project && (
           <Link to={`/proyecto/${project.id}`}>
-            <span className="dot" style={{ background: project.color }} />
+            <span className="dot" style={{ background: safeColor(project.color) }} />
             {project.company ? `${project.company} / ` : ''}{project.name}
           </Link>
         )}
@@ -60,7 +61,7 @@ export function MeetingPage() {
             <div>
               <p className="eyebrow">{formatLongDate(meeting.date)}</p>
               <h1>{meeting.title || 'Reunión'}</h1>
-              {meeting.attendees && <p className="attendees">👥 {meeting.attendees}</p>}
+              {meeting.attendees && <p className="attendees"><span aria-hidden="true">👥</span><span className="sr-only">Asistentes:</span> {meeting.attendees}</p>}
             </div>
             <div className="actions">
               <button className="btn primary" onClick={() => setParams({ editar: '1' }, { replace: true })}>Editar</button>
@@ -140,7 +141,7 @@ function MeetingEditor({ meeting, projects, onDone }: {
   return (
     <section className="card editor">
       <div className="editor-head">
-        <input className="title-input" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Título de la reunión" autoFocus={!form.title} />
+        <input className="title-input" maxLength={LIMITS.title} value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Título de la reunión" autoFocus={!form.title} />
         <span className="save-status">{status === 'saving' ? 'Guardando…' : 'Guardado ✓'}</span>
       </div>
       <div className="form-row three">
@@ -156,15 +157,16 @@ function MeetingEditor({ meeting, projects, onDone }: {
         </label>
         <label>
           Asistentes
-          <input value={form.attendees} onChange={(e) => set('attendees', e.target.value)} placeholder="Ana, Luis, cliente…" />
+          <input maxLength={LIMITS.attendees} value={form.attendees} onChange={(e) => set('attendees', e.target.value)} placeholder="Ana, Luis, cliente…" />
         </label>
       </div>
       <div className="notes-label">
         <div className="notes-label-row">
           <span>Notas</span>
-          <button type="button" className="btn ai small" onClick={() => setOrganizing(true)}>✨ Ordenar con IA</button>
+          <button type="button" className="btn ai small" onClick={() => setOrganizing(true)}><span aria-hidden="true">✨</span> Ordenar con IA</button>
         </div>
         <textarea
+          maxLength={LIMITS.notes}
           className="notes-input"
           value={form.notes}
           onChange={(e) => set('notes', e.target.value)}

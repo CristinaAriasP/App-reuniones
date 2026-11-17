@@ -93,6 +93,8 @@ function authMessage(e: unknown): string {
     'auth/network-request-failed': 'No hay conexión a internet.',
     'auth/popup-blocked': 'El navegador ha bloqueado la ventana de Google. Permite las ventanas emergentes para esta página.',
     'auth/operation-not-allowed': 'Este método de inicio de sesión no está activado en Firebase (Authentication → Sign-in method).',
+    'auth/admin-restricted-operation': 'En esta app no se pueden crear cuentas nuevas. Entra con la cuenta que ya tienes.',
+    'auth/user-disabled': 'Esta cuenta está desactivada.',
     'auth/unauthorized-domain': 'Esta dirección web no está autorizada en Firebase (Authentication → Settings → Authorized domains).',
   };
   return map[code] ?? 'No se pudo iniciar sesión. Vuelve a intentarlo.';
@@ -105,6 +107,7 @@ export function LoginScreen({ onSkip }: { onSkip?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   async function run(fn: () => Promise<unknown>) {
     setBusy(true); setError(''); setInfo('');
@@ -131,7 +134,7 @@ export function LoginScreen({ onSkip }: { onSkip?: () => void }) {
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <div className="hero-emoji">🗂️</div>
+        <div className="hero-emoji" aria-hidden="true">🗂️</div>
         <h1>Reuniones</h1>
         <p className="muted">Inicia sesión para guardar tus reuniones en la nube y verlas desde cualquier dispositivo.</p>
 
@@ -147,12 +150,12 @@ export function LoginScreen({ onSkip }: { onSkip?: () => void }) {
         <form className="form" onSubmit={submit}>
           <label>
             Email
-            <input id="login-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <input id="login-email" type="email" maxLength={254} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </label>
           {view !== 'reset' && (
             <label>
               Contraseña
-              <input id="login-password" type="password" autoComplete={view === 'signup' ? 'new-password' : 'current-password'}
+              <input id="login-password" type="password" maxLength={128} autoComplete={view === 'signup' ? 'new-password' : 'current-password'}
                 value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
             </label>
           )}
@@ -170,6 +173,17 @@ export function LoginScreen({ onSkip }: { onSkip?: () => void }) {
           </>}
           {view !== 'login' && <button className="link-btn" onClick={() => setView('login')}>Ya tengo cuenta</button>}
         </div>
+
+        <p className="muted small">
+          Solo se usa tu email para identificarte y guardar tus datos en tu cuenta.{' '}
+          <a href="#/privacidad" onClick={(e) => { e.preventDefault(); setShowPrivacy((v) => !v); }} aria-expanded={showPrivacy}>Más información</a>
+        </p>
+        {showPrivacy && (
+          <p className="muted small login-privacy">
+            Con cuenta, tus reuniones se guardan en Firebase (Google Cloud) y solo tú puedes leerlas.
+            Sin cuenta, se quedan en este navegador. No hay cookies de analítica ni de publicidad.
+          </p>
+        )}
 
         {onSkip && (
           <p className="login-skip">

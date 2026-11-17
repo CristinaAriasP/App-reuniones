@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, PROJECT_COLORS, type Project } from '../db';
+import { COLOR_NAMES, db, PROJECT_COLORS, type Project } from '../db';
 import { Modal } from './Modal';
+import { LIMITS } from '../validation';
 
 export function ProjectForm({ project, onClose, onSaved }: {
   project?: Project;
@@ -34,18 +35,18 @@ export function ProjectForm({ project, onClose, onSaved }: {
       <form onSubmit={submit} className="form">
         <label>
           Nombre del proyecto
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Rediseño web" required />
+          <input autoFocus maxLength={LIMITS.name} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Rediseño web" required />
         </label>
         <label>
           Empresa / cliente
-          <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Ej. Acme S.L." list="companies" />
+          <input maxLength={LIMITS.name} value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Ej. Acme S.L." list="companies" />
           <datalist id="companies">
             {companies?.filter(Boolean).map((c) => <option key={c} value={c} />)}
           </datalist>
         </label>
         <label>
           Descripción
-          <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Contexto, objetivos, contactos…" />
+          <textarea rows={3} maxLength={LIMITS.description} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Contexto, objetivos, contactos…" />
         </label>
         <div className="field">
           <span>Color</span>
@@ -57,7 +58,8 @@ export function ProjectForm({ project, onClose, onSaved }: {
                 className={'swatch' + (c === color ? ' selected' : '')}
                 style={{ background: c }}
                 onClick={() => setColor(c)}
-                aria-label={`Color ${c}`}
+                aria-label={`Color ${COLOR_NAMES[c] ?? c}`}
+                aria-pressed={c === color}
               />
             ))}
           </div>

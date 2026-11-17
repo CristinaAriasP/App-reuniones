@@ -1,0 +1,5 @@
+# App privada con inicio de sesión: no tiene contenido público.
+# No se bloquea el rastreo para que los buscadores puedan leer la indicación «noindex»
+# (cabecera X-Robots-Tag y etiqueta meta) y no la muestren en los resultados.
+User-agent: *
+Allow: /

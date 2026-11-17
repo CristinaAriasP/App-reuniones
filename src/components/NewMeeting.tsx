@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Meeting } from '../db';
 import { todayISO } from '../utils';
 import { Modal } from './Modal';
+import { LIMITS } from '../validation';
 
 export function NewMeetingDialog({ projectId, onClose }: { projectId?: number; onClose: () => void }) {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export function NewMeetingDialog({ projectId, onClose }: { projectId?: number; o
         )}
         <label>
           Título (opcional)
-          <input autoFocus={!!projectId} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej. Kick-off, seguimiento semanal…" />
+          <input autoFocus={!!projectId} maxLength={LIMITS.title} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej. Kick-off, seguimiento semanal…" />
         </label>
         <label>
           Fecha

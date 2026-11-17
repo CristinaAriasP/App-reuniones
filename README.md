@@ -24,6 +24,11 @@ y guardar los datos en la cuenta, sincronizados entre dispositivos. Guía paso a
 
 Sin Firebase configurado, la app funciona igual que siempre, guardando todo en el navegador.
 
+## Seguridad, accesibilidad y legal
+
+Cómo cumple la app cada regla de calidad, seguridad, SEO, legal y accesibilidad (y cuáles no aplican, y por qué):
+[docs/CUMPLIMIENTO.md](docs/CUMPLIMIENTO.md).
+
 ## Dónde se guardan los datos
 
 En el propio navegador (IndexedDB), en tu ordenador. No hay servidor ni se envía nada fuera.

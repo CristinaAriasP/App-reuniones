@@ -7,6 +7,7 @@ import { NewMeetingDialog } from '../components/NewMeeting';
 import { ProjectForm } from '../components/ProjectForm';
 import { DueBadge, TaskItem, sortTasks } from '../components/TaskList';
 import { formatDate, formatLongDate, snippet, todayISO, toISO } from '../utils';
+import { safeColor } from '../validation';
 
 export function Dashboard() {
   const [newMeeting, setNewMeeting] = useState(false);
@@ -39,7 +40,7 @@ export function Dashboard() {
   if (data.projects.length === 0) {
     return (
       <div className="empty-hero">
-        <div className="hero-emoji">🗂️</div>
+        <div className="hero-emoji" aria-hidden="true">🗂️</div>
         <h1>Todas tus reuniones, en un solo sitio</h1>
         <p>
           Crea un proyecto por cada cliente o iniciativa. Dentro podrás guardar las notas de cada reunión,
@@ -85,7 +86,7 @@ export function Dashboard() {
                 const p = projectById.get(d.projectId);
                 return (
                   <li key={d.id} className="list-row">
-                    <span className="dot" style={{ background: p?.color }} />
+                    <span className="dot" style={{ background: safeColor(p?.color) }} />
                     <div className="grow">
                       <Link to={`/proyecto/${d.projectId}?tab=entregas`} className="row-title">{d.title}</Link>
                       <div className="row-sub">{p?.name} · {STATUS_LABEL[d.status]}</div>
@@ -115,7 +116,7 @@ export function Dashboard() {
                     <div className="grow">
                       <Link to={`/reunion/${m.id}`} className="row-title">{m.title || 'Reunión'}</Link>
                       <div className="row-sub">
-                        <span className="dot small" style={{ background: p?.color }} /> {p?.name}
+                        <span className="dot small" style={{ background: safeColor(p?.color) }} /> {p?.name}
                         {m.notes && <> · {snippet(m.notes, [], 50)}</>}
                       </div>
                     </div>

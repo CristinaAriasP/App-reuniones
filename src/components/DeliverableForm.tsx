@@ -3,6 +3,7 @@ import { db, STATUS_LABEL, type Deliverable, type DeliverableStatus } from '../d
 import { todayISO } from '../utils';
 import { Modal } from './Modal';
 import { useConfirm } from './Confirm';
+import { LIMITS } from '../validation';
 
 export function DeliverableForm({ projectId, deliverable, onClose }: {
   projectId: number;
@@ -36,7 +37,7 @@ export function DeliverableForm({ projectId, deliverable, onClose }: {
       <form onSubmit={submit} className="form">
         <label>
           Qué hay que entregar
-          <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej. Propuesta de diseño v1" required />
+          <input autoFocus maxLength={LIMITS.shortText} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej. Propuesta de diseño v1" required />
         </label>
         <div className="form-row">
           <label>
@@ -52,7 +53,7 @@ export function DeliverableForm({ projectId, deliverable, onClose }: {
         </div>
         <label>
           Notas
-          <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Requisitos, formato, a quién se entrega…" />
+          <textarea rows={3} maxLength={LIMITS.description} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Requisitos, formato, a quién se entrega…" />
         </label>
         <div className="form-actions">
           {deliverable && <button type="button" className="btn danger-ghost" onClick={remove}>Borrar</button>}

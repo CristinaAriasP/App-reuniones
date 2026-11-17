@@ -31,7 +31,7 @@ export function Notes({ text, terms = [] }: { text: string; terms?: string[] }) 
     if ((m = line.match(/^\s*[-*•]\s+\[( |x|X)\]\s+(.*)$/)) || (m = line.match(/^\s*\[( |x|X)\]\s+(.*)$/))) {
       if (!list || list.ordered) { flush(); list = { ordered: false, items: [] }; }
       const done = m[1].toLowerCase() === 'x';
-      list.items.push(<li key={i} className={'check' + (done ? ' done' : '')}><span className="box">{done ? '☑' : '☐'}</span>{inline(m[2])}</li>);
+      list.items.push(<li key={i} className={'check' + (done ? ' done' : '')}><span className="box" aria-hidden="true">{done ? '☑' : '☐'}</span><span className="sr-only">{done ? 'Hecho:' : 'Pendiente:'}</span>{inline(m[2])}</li>);
     } else if ((m = line.match(/^\s*[-*•]\s+(.*)$/))) {
       if (!list || list.ordered) { flush(); list = { ordered: false, items: [] }; }
       list.items.push(<li key={i}>{inline(m[1])}</li>);

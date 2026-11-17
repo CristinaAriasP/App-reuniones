@@ -85,7 +85,7 @@ function AISettings() {
   if (isInClaudeViewer()) {
     return (
       <section className="card">
-        <h2>✨ Inteligencia artificial</h2>
+        <h2><span aria-hidden="true">✨</span> Inteligencia artificial</h2>
         <p>
           Aquí la IA usa tu propia cuenta de Claude: no tienes que configurar nada.
           La primera vez que pulses «Ordenar con IA» te pedirá permiso.
@@ -101,7 +101,7 @@ function AISettings() {
 
   return (
     <section className="card">
-      <h2>✨ Inteligencia artificial</h2>
+      <h2><span aria-hidden="true">✨</span> Inteligencia artificial</h2>
       <p>
         Para usar «Ordenar con IA» fuera de Claude, pega aquí una clave de API de Anthropic.
         Se guarda solo en este navegador y se envía únicamente a Anthropic, junto con el texto que pidas ordenar.
@@ -110,6 +110,7 @@ function AISettings() {
       <div className="key-row">
         <input
           id="api-key"
+          maxLength={300}
           type={show ? 'text' : 'password'}
           value={key}
           onChange={(e) => { setKey(e.target.value); setSaved(false); }}
