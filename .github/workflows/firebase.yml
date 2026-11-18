@@ -35,6 +35,11 @@ jobs:
         run: |
           # Mientras no esté configurada la llave, no se publica (pero tampoco se marca como error)
           if [ -z "$SA" ]; then
+            # Lanzado a mano: error visible. Lanzado por un cambio: se omite sin marcar error.
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "::error::No se ha publicado: falta el secreto FIREBASE_SERVICE_ACCOUNT en GitHub (Settings → Secrets and variables → Actions). Ver docs/FIREBASE.md"
+              exit 1
+            fi
             echo "::warning::Aún no está el secreto FIREBASE_SERVICE_ACCOUNT: no se publica (ver docs/FIREBASE.md)"
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
