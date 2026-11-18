@@ -2,7 +2,7 @@ import {
   collection, deleteDoc, doc, getDocs, onSnapshot, setDoc, writeBatch, type Firestore, type Unsubscribe,
 } from 'firebase/firestore';
 import Dexie from 'dexie';
-import { applyFromRemote, db, seedDefaultQuestions, setSyncTarget, TABLES, UNIQUE_ID_MIN, uniqueId, type TableName } from './db';
+import { applyFromRemote, db, getPendingQuestionIds, seedDefaultQuestions, setPendingQuestionIds, setSyncTarget, TABLES, UNIQUE_ID_MIN, uniqueId, type TableName } from './db';
 
 /**
  * Sincronización entre la base de datos del navegador (Dexie) y Firestore.
@@ -165,7 +165,19 @@ export async function startSync(fs: Firestore, uid: string, onStatus: (s: SyncSt
         }
       }
       await uploadRows(fs, uid, toUpload);
+    } else {
+      // Preguntas nuevas que trajo una actualización de la app: se suben si la cuenta no tiene ya
+      // una con el mismo texto (si otro dispositivo ya las subió, se usan esas y no se duplican)
+      const pending = getPendingQuestionIds();
+      if (pending.length) {
+        await mergeQuestionTemplates(remote.get('questions')!);
+        const rows = (await db.questions.bulkGet(pending)).filter(Boolean) as unknown as Row[];
+        const fresh = rows.filter((r) => !remote.get('questions')!.has(r.id));
+        await uploadRows(fs, uid, fresh.map((row) => ({ table: 'questions' as TableName, row })));
+        for (const r of fresh) remote.get('questions')!.set(r.id, r);
+      }
     }
+    setPendingQuestionIds([]);
 
     // Traer lo de la cuenta. Si este navegador ya estaba sincronizado, lo que no esté en la nube se borró en otro sitio.
     const losers: { table: TableName; id: number }[] = [];

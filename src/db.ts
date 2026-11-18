@@ -161,10 +161,44 @@ db.version(4).stores({}).upgrade(async (tx) => {
   await applyV4(tx.table('questions'));
 });
 
+/** v5: tipografías y sus licencias. */
+async function applyV5(table: Dexie.Table<Question, number>): Promise<number[]> {
+  const all = await table.toArray();
+  const exists = (t: string) => all.some((q) => q.text.trim().toLowerCase() === t.toLowerCase());
+  if (exists('¿La web tiene que usar unas tipografías concretas?')) return [];
+  let order = all.reduce((m, q) => Math.max(m, q.order), 0);
+  const parentId = (await table.add({ text: '¿La web tiene que usar unas tipografías concretas?', kind: 'sino', options: [],
+    parentId: null, order: ++order, archived: false, createdAt: 0 } as unknown as Question)) as number;
+  const childId = (await table.add({ text: '¿Se tienen las licencias para usar esas tipografías en la web?', kind: 'unica',
+    options: ['Sí, hay licencia para web', 'Hay que comprar la licencia', 'Son de uso libre (Google Fonts u otras)'],
+    parentId, order: ++order, archived: false, createdAt: 0 } as unknown as Question)) as number;
+  return [parentId, childId];
+}
+
+// ---------- Preguntas nuevas de la plantilla pendientes de subir a la cuenta ----------
+// Cuando una actualización de la app añade preguntas por defecto, se apuntan aquí para que la
+// sincronización las suba (si la cuenta no tiene ya una pregunta con el mismo texto).
+const PENDING_KEY = 'reuniones.pendingQuestions';
+export function getPendingQuestionIds(): number[] {
+  try { return JSON.parse(localStorage.getItem(PENDING_KEY) ?? '[]'); } catch { return []; }
+}
+export function setPendingQuestionIds(ids: number[]) {
+  try {
+    if (ids.length) localStorage.setItem(PENDING_KEY, JSON.stringify(ids));
+    else localStorage.removeItem(PENDING_KEY);
+  } catch { /* sin almacenamiento */ }
+}
+
+db.version(5).stores({}).upgrade(async (tx) => {
+  const added = await applyV5(tx.table('questions'));
+  setPendingQuestionIds([...getPendingQuestionIds(), ...added]);
+});
+
 db.on('populate', async (tx) => {
   await tx.table('questions').bulkAdd(DEFAULT_QUESTIONS);
   await addMissingQuestions(tx.table('questions'), QUESTIONS_V3);
   await applyV4(tx.table('questions'));
+  await applyV5(tx.table('questions'));
 });
 
 /** Vuelve a crear la plantilla de preguntas por defecto (p. ej. tras cerrar sesión). */
@@ -175,6 +209,7 @@ export async function seedDefaultQuestions() {
     const table = db.table('questions') as Dexie.Table<Question, number>;
     await addMissingQuestions(table, QUESTIONS_V3);
     await applyV4(table);
+    await applyV5(table);
   });
 }
 
