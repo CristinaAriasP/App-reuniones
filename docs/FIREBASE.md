@@ -48,7 +48,7 @@ npm run deploy          # publica la app y las reglas de seguridad
 
 ### Opción B — Automática desde GitHub (sin instalar nada)
 
-GitHub publica la app solo cada vez que hay cambios en la rama `main`. Se configura una vez:
+GitHub publica la app sola cada vez que hay cambios. Se configura una vez (haz antes los pasos 1 y 2):
 
 1. **Crear una cuenta de servicio** (una «llave» solo para publicar):
    <https://console.cloud.google.com/iam-admin/serviceaccounts?project=agenda-de-proyectos>
@@ -59,8 +59,10 @@ GitHub publica la app solo cada vez que hay cambios en la rama `main`. Se config
 3. En GitHub: repositorio → **Settings → Secrets and variables → Actions → New repository secret**.
    Nombre: `FIREBASE_SERVICE_ACCOUNT`. Valor: pega **todo** el contenido del archivo JSON. Guardar.
 4. Borra el archivo JSON de tu ordenador: es una llave y ya está guardada (cifrada) en GitHub.
-5. Une esta rama a `main` (con una *pull request*). GitHub publicará la app automáticamente;
-   el progreso se ve en la pestaña **Actions**. También se puede lanzar a mano desde ahí («Publicar en Firebase» → *Run workflow*).
+5. **Lanza la primera publicación:** en GitHub, pestaña **Actions** → «Publicar en Firebase» → **Run workflow**.
+   (O avisa a Claude: cualquier cambio que suba a la rama también la publica.) Tarda 1-2 minutos;
+   cuando salga el tic verde, la app ya está en https://agenda-de-proyectos.web.app.
+   A partir de ahí, cada cambio que se suba se publica solo.
 
 Si la publicación falla por permisos, copia el mensaje de error de la pestaña Actions y revisamos los roles.
 
