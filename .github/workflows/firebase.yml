@@ -1,0 +1,46 @@
+# Publica la app en Firebase Hosting (y sube las reglas de seguridad de Firestore)
+# cada vez que se suben cambios a la rama main, o a mano desde la pestaña «Actions» de GitHub.
+#
+# Necesita un secreto en GitHub: Settings → Secrets and variables → Actions → FIREBASE_SERVICE_ACCOUNT
+# (el contenido del archivo JSON de la cuenta de servicio; ver docs/FIREBASE.md).
+name: Publicar en Firebase
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Comprobar que existe el secreto
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::error::Falta el secreto FIREBASE_SERVICE_ACCOUNT (ver docs/FIREBASE.md)"
+            exit 1
+          fi
+      - name: Publicar
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          npx firebase deploy --only hosting,firestore:rules --project agenda-de-proyectos --non-interactive
+          rm -f "$RUNNER_TEMP/sa.json"

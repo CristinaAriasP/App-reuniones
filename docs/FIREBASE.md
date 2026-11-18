@@ -1,81 +1,77 @@
 # Publicar la app en Firebase (con inicio de sesión)
 
-Con Firebase la app tiene su propia dirección web (`https://tu-proyecto.web.app`), se inicia sesión con Google o con email,
+Con Firebase la app tiene su propia dirección web (`https://agenda-de-proyectos.web.app`), se inicia sesión con Google o con email,
 y todo se guarda en tu cuenta: lo ves igual desde el ordenador del trabajo, el portátil o el móvil.
 
 El plan gratuito de Firebase (Spark) es de sobra para este uso. No hace falta poner tarjeta.
 
-Tiempo aproximado: 20 minutos la primera vez.
+Tiempo aproximado: 10-15 minutos la primera vez.
 
 ---
 
-## 1. Crear el proyecto de Firebase
+## Estado: proyecto «agenda-de-proyectos» ya conectado
 
-1. Entra en <https://console.firebase.google.com> con tu cuenta de Google.
-2. **Crear un proyecto** → ponle un nombre, por ejemplo `reuniones-cristina`.
-   Firebase le dará un identificador (por ejemplo `reuniones-cristina` o `reuniones-cristina-1a2b3`). Será parte de la dirección web.
-3. Google Analytics: puedes desactivarlo, no hace falta.
+La app ya está configurada para tu proyecto de Firebase **agenda-de-proyectos**
+(archivos `.env.production` y `.firebaserc`). Su dirección será **https://agenda-de-proyectos.web.app**.
 
-## 2. Activar el inicio de sesión
+Faltan los pasos 1 a 3, que solo puedes hacer tú desde la consola: <https://console.firebase.google.com/project/agenda-de-proyectos>
 
-1. En el menú izquierdo: **Compilación → Authentication → Comenzar**.
+## 1. Activar el inicio de sesión
+
+1. Menú izquierdo: **Compilación → Authentication → Comenzar**.
 2. Pestaña **Método de acceso** (Sign-in method):
    - **Google** → Habilitar → elige tu email como correo de asistencia → Guardar.
    - **Correo electrónico/contraseña** → Habilitar → Guardar.
 
-## 3. Crear la base de datos
+## 2. Crear la base de datos
 
 1. **Compilación → Firestore Database → Crear base de datos**.
 2. Ubicación: una de Europa, por ejemplo **europe-southwest1 (Madrid)**. No se puede cambiar después.
-3. Modo: **producción**. Las reglas de seguridad de verdad las subes en el paso 5
-   (solo tú podrás leer y escribir tus datos).
+3. Modo: **producción**. Las reglas de verdad se suben al publicar (paso 3).
 
-## 4. Registrar la app web y copiar su configuración
+## 3. Publicar la app
 
-1. Rueda dentada ⚙️ (arriba a la izquierda) → **Configuración del proyecto** → apartado **Tus apps** → icono **`</>`** (Web).
-2. Ponle un apodo, por ejemplo `Reuniones web`. No hace falta marcar Firebase Hosting aquí.
-3. Te mostrará un bloque `firebaseConfig` con `apiKey`, `authDomain`, `projectId`, `appId`…
-4. En la carpeta del proyecto, copia el archivo `.env.example` como **`.env.local`** y rellénalo con esos valores:
+Elige una de las dos formas.
 
-   ```
-   VITE_FIREBASE_API_KEY=AIza...
-   VITE_FIREBASE_AUTH_DOMAIN=reuniones-cristina.firebaseapp.com
-   VITE_FIREBASE_PROJECT_ID=reuniones-cristina
-   VITE_FIREBASE_APP_ID=1:1234567890:web:abc123
-   ```
+### Opción A — Desde tu ordenador (la más directa)
 
-   Estos valores no son secretos (identifican el proyecto), pero `.env.local` no se sube a GitHub por si acaso.
-
-## 5. Publicar desde tu ordenador
-
-Necesitas [Node.js](https://nodejs.org) (versión LTS) instalado.
+Necesitas [Node.js](https://nodejs.org) (versión LTS). En una terminal:
 
 ```bash
-# 1. Descargar el proyecto (o descárgalo como ZIP desde GitHub)
 git clone https://github.com/CristinaAriasP/App-reuniones.git
 cd App-reuniones
 git checkout claude/meeting-management-app-p6upip   # hasta que se una a main
-
-# 2. Instalar dependencias
 npm install
-
-# 3. (Crea aquí el archivo .env.local del paso 4)
-
-# 4. Iniciar sesión en Firebase y elegir tu proyecto
-npx firebase login
-npx firebase use --add        # elige tu proyecto y ponle el alias "default"
-
-# 5. Publicar la app y las reglas de seguridad
-npm run deploy
+npx firebase login      # se abre el navegador: entra con tu cuenta de Google
+npm run deploy          # publica la app y las reglas de seguridad
 ```
 
-Al terminar te dirá la dirección: **`https://<tu-proyecto>.web.app`**. Ábrela, inicia sesión y listo.
+### Opción B — Automática desde GitHub (sin instalar nada)
 
-Cada vez que haya cambios en la app, repite `npm run deploy` para publicar la nueva versión.
+GitHub publica la app solo cada vez que hay cambios en la rama `main`. Se configura una vez:
 
-Para probarla en tu ordenador antes de publicar: `npm run dev` y abre <http://localhost:5173>.
+1. **Crear una cuenta de servicio** (una «llave» solo para publicar):
+   <https://console.cloud.google.com/iam-admin/serviceaccounts?project=agenda-de-proyectos>
+   → **Crear cuenta de servicio** → nombre `github-publicar` → **Crear y continuar** → añade estos roles:
+   *Administrador de Firebase Hosting*, *Administrador de reglas de Firebase*, *Visualizador de claves de API*,
+   *Visualizador de Cloud Run* y *Consumidor de Service Usage* → **Listo**.
+2. Entra en la cuenta creada → pestaña **Claves** → **Agregar clave → Crear clave nueva → JSON**. Se descarga un archivo.
+3. En GitHub: repositorio → **Settings → Secrets and variables → Actions → New repository secret**.
+   Nombre: `FIREBASE_SERVICE_ACCOUNT`. Valor: pega **todo** el contenido del archivo JSON. Guardar.
+4. Borra el archivo JSON de tu ordenador: es una llave y ya está guardada (cifrada) en GitHub.
+5. Une esta rama a `main` (con una *pull request*). GitHub publicará la app automáticamente;
+   el progreso se ve en la pestaña **Actions**. También se puede lanzar a mano desde ahí («Publicar en Firebase» → *Run workflow*).
 
-## 6. Pasar lo que ya tienes en el enlace de Claude
+Si la publicación falla por permisos, copia el mensaje de error de la pestaña Actions y revisamos los roles.
+
+---
+
+Al terminar, abre **https://agenda-de-proyectos.web.app**, crea tu cuenta (o entra con Google)
+y sigue con el paso 5 para que nadie más pueda registrarse.
+
+Para probar la app en tu ordenador sin publicarla: `npm run dev` y abre <http://localhost:5173>.
+
+## 4. Pasar lo que ya tienes en el enlace de Claude
 
 Los datos del enlace de Claude están guardados en ese navegador. Para llevarlos a tu cuenta:
 
@@ -84,9 +80,9 @@ Los datos del enlace de Claude están guardados en ese navegador. Para llevarlos
 
 (Si antes usabas la app sin cuenta en el mismo navegador, no hace falta: al iniciar sesión por primera vez, lo que hubiera se sube solo.)
 
-## 7. Que solo puedas entrar tú (importante)
+## 5. Que solo puedas entrar tú (importante)
 
-La app es para ti sola. Una vez creada tu cuenta (paso 5), cierra la puerta a cuentas nuevas:
+La app es para ti sola. Una vez creada tu cuenta, cierra la puerta a cuentas nuevas:
 
 1. **Authentication → Configuración → Acciones del usuario** → desmarca **Habilitar la creación (registro)** → Guardar.
 2. En esa misma pantalla, comprueba que está activada la **Protección contra la enumeración de correos electrónicos**
@@ -101,7 +97,7 @@ Este paso evita además que alguien use tu proyecto para guardar sus propias cos
 Firebase ya limita los intentos de inicio de sesión fallidos («Demasiados intentos. Espera unos minutos») y guarda las contraseñas cifradas;
 la app nunca ve ni guarda tu contraseña.
 
-## 8. La IA fuera de Claude
+## 6. La IA fuera de Claude
 
 En la versión de Firebase, «Ordenar con IA» usa una clave de API de Anthropic. Créala en <https://console.anthropic.com>
 y pégala en **⚙️ Ajustes y copia → Inteligencia artificial**. Se guarda solo en ese navegador.
@@ -127,7 +123,7 @@ y pégala en **⚙️ Ajustes y copia → Inteligencia artificial**. Se guarda s
 
 | Mensaje | Qué hacer |
 |---|---|
-| «Este método de inicio de sesión no está activado» | Paso 2: activa Google y/o Correo electrónico/contraseña. |
+| «Este método de inicio de sesión no está activado» | Paso 1: activa Google y/o Correo electrónico/contraseña. |
 | «Esta dirección web no está autorizada» | Authentication → Configuración → Dominios autorizados → añade el dominio donde abres la app. Los de `web.app`, `firebaseapp.com` y `localhost` ya vienen. |
-| «Error al sincronizar» (punto rojo) | Comprueba que has hecho `npm run deploy` (sube también las reglas) y que la base de datos de Firestore existe (paso 3). |
-| La app sale sin pantalla de inicio de sesión | Falta el archivo `.env.local` (paso 4) al hacer `npm run deploy`. |
+| «Error al sincronizar» (punto rojo) | Comprueba que has hecho `npm run deploy` (sube también las reglas) y que la base de datos de Firestore existe (paso 2). |
+| «El inicio de sesión aún no está activado en Firebase» | Paso 1: Authentication → Comenzar, y activa los métodos de acceso. |

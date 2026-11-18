@@ -92,6 +92,7 @@ function authMessage(e: unknown): string {
     'auth/too-many-requests': 'Demasiados intentos. Espera unos minutos y vuelve a probar.',
     'auth/network-request-failed': 'No hay conexión a internet.',
     'auth/popup-blocked': 'El navegador ha bloqueado la ventana de Google. Permite las ventanas emergentes para esta página.',
+    'auth/configuration-not-found': 'El inicio de sesión aún no está activado en Firebase (Authentication → Comenzar).',
     'auth/operation-not-allowed': 'Este método de inicio de sesión no está activado en Firebase (Authentication → Sign-in method).',
     'auth/admin-restricted-operation': 'En esta app no se pueden crear cuentas nuevas. Entra con la cuenta que ya tienes.',
     'auth/user-disabled': 'Esta cuenta está desactivada.',

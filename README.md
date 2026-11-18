@@ -49,12 +49,12 @@ Tecnología: React + TypeScript + Vite, con Dexie (IndexedDB) para los datos.
 
 ## Publicarla
 
-El workflow `.github/workflows/deploy.yml` publica la app en GitHub Pages cada vez que se sube algo a `main`.
-Para activarlo: en GitHub, *Settings → Pages → Source: GitHub Actions*.
+Se publica en Firebase Hosting, en **https://agenda-de-proyectos.web.app**: con `npm run deploy` desde tu ordenador,
+o automáticamente con el workflow `.github/workflows/firebase.yml` al subir cambios a `main`. Pasos en [docs/FIREBASE.md](docs/FIREBASE.md).
 
 ## IA (Ordenar con IA)
 
 - **Dentro de claude.ai** (el enlace de artefacto) usa la cuenta de Claude de quien la abre; no hay que configurar nada.
-- **Fuera de claude.ai** (GitHub Pages o en local) hace falta una clave de API de Anthropic, que se pega en *Ajustes*.
+- **Fuera de claude.ai** (la versión de Firebase o en local) hace falta una clave de API de Anthropic, que se pega en *Ajustes*.
   La clave se guarda solo en el navegador y la app llama directamente a la API de Anthropic con el modelo `claude-opus-5-5`
   y salidas estructuradas. Cada uso consume un poco de saldo de esa cuenta.
