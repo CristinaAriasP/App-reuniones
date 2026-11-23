@@ -43,8 +43,8 @@ export function PrivacyPage() {
           <li><strong>Sin cuenta</strong>: solo en este navegador, en este dispositivo.</li>
           <li><strong>Con cuenta</strong>: en Firebase (Google Cloud), en la región elegida al crear el proyecto: <strong>[p. ej. Madrid, europe-southwest1]</strong>. Solo tu cuenta puede leerlos.</li>
           <li>
-            <strong>Al usar «Ordenar con IA»</strong>: el texto que pides ordenar, el nombre del proyecto y las preguntas del cuestionario
-            se envían a Claude (Anthropic) para procesarlos. Solo cuando pulsas «Ordenar».
+            <strong>Al usar «Ordenar con IA»</strong> (solo en el enlace de Claude): el texto que pides ordenar, el nombre del proyecto y las preguntas del cuestionario
+            se envían a Claude (Anthropic) para procesarlos. Solo cuando pulsas «Ordenar». En la versión de Firebase no hay IA.
           </li>
         </ul>
       </section>

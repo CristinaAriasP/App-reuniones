@@ -99,12 +99,10 @@ Este paso evita además que alguien use tu proyecto para guardar sus propias cos
 Firebase ya limita los intentos de inicio de sesión fallidos («Demasiados intentos. Espera unos minutos») y guarda las contraseñas cifradas;
 la app nunca ve ni guarda tu contraseña.
 
-## 6. La IA fuera de Claude
+## 6. La IA
 
-En la versión de Firebase, «Ordenar con IA» usa una clave de API de Anthropic. Créala en <https://console.anthropic.com>
-y pégala en **⚙️ Ajustes y copia → Inteligencia artificial**. Se guarda solo en ese navegador.
-
----
+La versión de Firebase **no tiene «Ordenar con IA»**: no usa ninguna clave de API ni cobra nada.
+La IA solo funciona en el enlace de Claude, que usa la cuenta de Claude de quien lo abre.
 
 ## Cómo funciona por dentro
 
@@ -113,7 +111,7 @@ y pégala en **⚙️ Ajustes y copia → Inteligencia artificial**. Se guarda s
 - **Seguridad:** `firestore.rules` solo deja leer y escribir a la persona dueña de cada carpeta `users/{id}`,
   y comprueba cada dato que se guarda (campos permitidos, tipo y tamaño máximo).
 - **Cabeceras de seguridad** (en `firebase.json`): HTTPS obligatorio (HSTS), política de contenido (CSP) que solo permite
-  cargar código de la propia app y hablar con Firebase y Anthropic, prohibición de mostrar la app dentro de otras webs
+  cargar código de la propia app y hablar solo con Firebase, prohibición de mostrar la app dentro de otras webs
   y aviso a los buscadores para que no la indexen (es privada).
 - **Sin conexión:** la app sigue funcionando; los cambios se suben cuando vuelve internet.
   El punto de color junto a tu nombre indica el estado: verde (guardado en la nube), naranja (sin conexión), rojo (error).

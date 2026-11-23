@@ -4,7 +4,7 @@ import { todayISO } from '../utils';
 import { useConfirm } from '../components/Confirm';
 import { useAuth } from '../auth';
 import { QuestionsEditor } from '../components/QuestionsEditor';
-import { getApiKey, isInClaudeViewer, setApiKey } from '../ai';
+import { isInClaudeViewer } from '../ai';
 
 export function BackupPage() {
   const ask = useConfirm();
@@ -77,56 +77,16 @@ export function BackupPage() {
   );
 }
 
+/** Solo dentro de claude.ai: la IA usa la cuenta de Claude de quien la usa. En Firebase no hay IA. */
 function AISettings() {
-  const [key, setKey] = useState(getApiKey());
-  const [saved, setSaved] = useState(!!getApiKey());
-  const [show, setShow] = useState(false);
-
-  if (isInClaudeViewer()) {
-    return (
-      <section className="card">
-        <h2><span aria-hidden="true">✨</span> Inteligencia artificial</h2>
-        <p>
-          Aquí la IA usa tu propia cuenta de Claude: no tienes que configurar nada.
-          La primera vez que pulses «Ordenar con IA» te pedirá permiso.
-        </p>
-      </section>
-    );
-  }
-
-  function save() {
-    setApiKey(key.trim());
-    setSaved(!!key.trim());
-  }
-
+  if (!isInClaudeViewer()) return null;
   return (
     <section className="card">
-      <h2><span aria-hidden="true">✨</span> Inteligencia artificial</h2>
+      <h2>✨ Inteligencia artificial</h2>
       <p>
-        Para usar «Ordenar con IA» fuera de Claude, pega aquí una clave de API de Anthropic.
-        Se guarda solo en este navegador y se envía únicamente a Anthropic, junto con el texto que pidas ordenar.
-        Puedes crear una clave en console.anthropic.com. Cada uso tiene un pequeño coste en tu cuenta de Anthropic.
+        Aquí la IA usa tu propia cuenta de Claude: no tienes que configurar nada.
+        La primera vez que pulses «Ordenar con IA» te pedirá permiso.
       </p>
-      <div className="key-row">
-        <input
-          id="api-key"
-          maxLength={300}
-          type={show ? 'text' : 'password'}
-          value={key}
-          onChange={(e) => { setKey(e.target.value); setSaved(false); }}
-          placeholder="sk-ant-…"
-          aria-label="Clave de API de Anthropic"
-          autoComplete="off"
-        />
-        <button className="btn ghost" onClick={() => setShow((s) => !s)}>{show ? 'Ocultar' : 'Mostrar'}</button>
-        <button className="btn primary" onClick={save} disabled={saved && key === getApiKey()}>Guardar</button>
-      </div>
-      {saved && getApiKey() && (
-        <p className="notice ok">
-          Clave guardada. Ya puedes usar «Ordenar con IA».{' '}
-          <button className="link-btn" onClick={() => { setApiKey(''); setKey(''); setSaved(false); }}>Borrar clave</button>
-        </p>
-      )}
     </section>
   );
 }

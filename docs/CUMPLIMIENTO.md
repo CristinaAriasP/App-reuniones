@@ -20,7 +20,7 @@ Leyenda: ✅ se cumple · ➖ no aplica (y por qué) · ⚠️ depende de algo e
 
 | Regla | Estado | Cómo |
 |---|---|---|
-| Ningún secreto en el código | ✅ | La configuración de Firebase va en `.env.local` (no se sube a GitHub) y no es secreta. La clave de Anthropic la pega cada persona en Ajustes y se guarda solo en su navegador. |
+| Ningún secreto en el código | ✅ | La configuración de Firebase va en `.env.local` (no se sube a GitHub) y no es secreta. La versión de Firebase no usa ninguna clave de API (no tiene IA). |
 | Validar y limpiar entradas, escapar salidas | ✅ | Límites de longitud en todos los campos; las copias de seguridad se validan campo a campo antes de restaurarlas (`validation.ts`); el color de proyecto solo admite `#rrggbb`. React escapa todo lo que se muestra y no se usa `innerHTML`. Las respuestas de la IA se revisan antes de guardarse. |
 | Consultas parametrizadas | ➖ / ✅ | No hay SQL. Firestore e IndexedDB se consultan por id y campo, sin construir consultas con texto del usuario, así que no hay inyección posible. |
 | Contraseñas cifradas, límite de intentos, permisos en cada petición | ✅ | Lo gestiona Firebase Authentication: guarda las contraseñas con hash (scrypt), limita los intentos fallidos y la app nunca ve las contraseñas. Las reglas de Firestore comprueban en cada lectura y escritura que los datos son de quien pide, y validan su forma. Ver `docs/FIREBASE.md` paso 5 para impedir cuentas nuevas. |

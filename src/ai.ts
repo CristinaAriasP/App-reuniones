@@ -1,5 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 import { formatLongDate, todayISO } from './utils';
 
@@ -116,18 +114,6 @@ export class AIError extends Error {
   }
 }
 
-const KEY_STORAGE = 'reuniones.anthropicKey';
-
-export function getApiKey(): string {
-  try { return localStorage.getItem(KEY_STORAGE) ?? ''; } catch { return ''; }
-}
-export function setApiKey(key: string) {
-  try {
-    if (key) localStorage.setItem(KEY_STORAGE, key);
-    else localStorage.removeItem(KEY_STORAGE);
-  } catch { /* almacenamiento no disponible */ }
-}
-
 /** Dentro de claude.ai: usa la cuenta de Claude de quien ve la página. */
 async function claudeViewerOrganizer(): Promise<Organizer | null> {
   const claude = (window as unknown as { claude?: { use(name: string): Promise<unknown> } }).claude;
@@ -157,47 +143,15 @@ async function claudeViewerOrganizer(): Promise<Organizer | null> {
   };
 }
 
-/** Fuera de claude.ai: llama a la API de Anthropic con la clave guardada en este navegador. */
-function apiKeyOrganizer(apiKey: string): Organizer {
-  // La clave es del propio usuario y se guarda solo en su navegador.
-  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-  return async (raw, ctx, opts) => {
-    try {
-      const response = await client.beta.messages.parse({
-        model: 'claude-opus-5-5',
-        max_tokens: 16000,
-        output_config: { effort: 'medium', format: betaZodOutputFormat(OrganizedSchema) },
-        // Si el modelo rechaza la petición, el servidor la reintenta con otro modelo
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default',
-        messages: [{ role: 'user', content: buildPrompt(raw, ctx) }],
-      }, { signal: opts?.signal });
-      if (response.stop_reason === 'refusal') throw new AIError('La IA no ha podido procesar este texto.');
-      if (response.stop_reason === 'max_tokens') throw new AIError('El texto es demasiado largo para ordenarlo de una vez. Prueba con una parte.');
-      if (!response.parsed_output) throw new AIError('La IA devolvió una respuesta con un formato inesperado. Prueba otra vez.');
-      return response.parsed_output;
-    } catch (e) {
-      if (e instanceof AIError) throw e;
-      if (e instanceof Anthropic.APIUserAbortError) throw new AIError('Cancelado', 'cancelled');
-      if (e instanceof Anthropic.AuthenticationError) throw new AIError('La clave de API no es válida. Revísala en Ajustes.', 'not_allowed');
-      if (e instanceof Anthropic.PermissionDeniedError) throw new AIError('Tu clave de API no tiene permiso para usar este modelo.', 'not_allowed');
-      if (e instanceof Anthropic.RateLimitError) throw new AIError('Has superado el límite de uso de la API. Espera un poco y vuelve a intentarlo.');
-      if (e instanceof Anthropic.APIConnectionError) throw new AIError('No se pudo conectar con Claude. Revisa tu conexión a internet.');
-      if (e instanceof Anthropic.APIError) throw new AIError(`Error de la API de Claude (${e.status ?? '?'}). Vuelve a intentarlo.`);
-      throw new AIError('No se pudo ordenar el texto. Vuelve a intentarlo.');
-    }
-  };
-}
+/**
+ * La IA solo funciona dentro de claude.ai (enlace de Claude), con la cuenta de Claude de quien la usa.
+ * En la versión de Firebase no hay IA: no se usa ninguna clave de API.
+ */
+export type AIMode = 'claude' | null;
 
-export type AIMode = 'claude' | 'apikey' | null;
-
-/** Devuelve la forma disponible de usar la IA en este entorno, o null. */
 export async function getOrganizer(): Promise<{ mode: AIMode; organize: Organizer } | null> {
   const viewer = await claudeViewerOrganizer();
-  if (viewer) return { mode: 'claude', organize: viewer };
-  const key = getApiKey();
-  if (key) return { mode: 'apikey', organize: apiKeyOrganizer(key) };
-  return null;
+  return viewer ? { mode: 'claude', organize: viewer } : null;
 }
 
 export function isInClaudeViewer(): boolean {

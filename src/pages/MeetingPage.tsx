@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, deleteMeeting, isAnswered, saveAnswer, type Meeting, type Task } from '../db';
 import { OrganizeDialog, type OrganizeApply } from '../components/OrganizeDialog';
 import { Notes } from '../components/Notes';
+import { isInClaudeViewer } from '../ai';
 import { Questionnaire, useMeetingQuestionnaire } from '../components/Questionnaire';
 import { useConfirm } from '../components/Confirm';
 import { TaskItem, TaskQuickAdd, sortTasks } from '../components/TaskList';
@@ -100,6 +101,7 @@ function MeetingEditor({ meeting, projects, onDone }: {
   });
   const [status, setStatus] = useState<'saved' | 'saving'>('saved');
   const [organizing, setOrganizing] = useState(false);
+  const aiOn = isInClaudeViewer();
   const questionnaire = useMeetingQuestionnaire(meeting.id);
   const first = useRef(true);
   const latest = useRef(form);
@@ -163,7 +165,7 @@ function MeetingEditor({ meeting, projects, onDone }: {
       <div className="notes-label">
         <div className="notes-label-row">
           <span>Notas</span>
-          <button type="button" className="btn ai small" onClick={() => setOrganizing(true)}><span aria-hidden="true">✨</span> Ordenar con IA</button>
+          {aiOn && <button type="button" className="btn ai small" onClick={() => setOrganizing(true)}><span aria-hidden="true">✨</span> Ordenar con IA</button>}
         </div>
         <textarea
           maxLength={LIMITS.notes}
@@ -172,7 +174,7 @@ function MeetingEditor({ meeting, projects, onDone }: {
           onChange={(e) => set('notes', e.target.value)}
           autoFocus={!!form.title}
           aria-label="Notas"
-          placeholder={'Escribe aquí lo que se habla en la reunión, aunque sea desordenado.\nLuego pulsa «Ordenar con IA».\n\n# Temas\n- Punto tratado\n- **Decisión importante**\n\n[ ] Algo pendiente'}
+          placeholder={'Escribe aquí lo que se habla en la reunión, aunque sea desordenado.\n' + (aiOn ? 'Luego pulsa «Ordenar con IA».\n' : '') + '\n# Temas\n- Punto tratado\n- **Decisión importante**\n\n[ ] Algo pendiente'}
         />
       </div>
       <div className="form-actions">

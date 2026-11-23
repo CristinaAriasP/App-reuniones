@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { AIError, cleanAnswers, getOrganizer, isInClaudeViewer, toNotes, type AIMode, type OrganizeContext, type Organized } from '../ai';
+import { AIError, cleanAnswers, getOrganizer, toNotes, type AIMode, type OrganizeContext, type Organized } from '../ai';
 import { formatDate } from '../utils';
 import { CHOICE_LABEL } from '../db';
 import { Modal } from './Modal';
@@ -88,9 +87,7 @@ export function OrganizeDialog({ initialText, ctx, currentTitle, answeredIds, on
     <Modal title="Ordenar con IA" onClose={close} wide>
       {mode === null && (
         <div className="notice info">
-          {isInClaudeViewer()
-            ? 'La IA no está disponible en esta vista.'
-            : <>Para usar la IA fuera de Claude necesitas una clave de API de Anthropic. <Link to="/ajustes" onClick={close}>Configúrala en Ajustes</Link>.</>}
+          {'La IA no está disponible en esta vista.'}
         </div>
       )}
 
@@ -113,7 +110,6 @@ export function OrganizeDialog({ initialText, ctx, currentTitle, answeredIds, on
             <span className="muted small">
               Al pulsar «Ordenar», este texto se envía a Claude (Anthropic).
               {mode === 'claude' && ' Usa tu cuenta de Claude; te pedirá permiso la primera vez.'}
-              {mode === 'apikey' && ' Usa tu clave de API de Anthropic.'}
             </span>
             <span className="spacer" />
             {phase === 'working' ? (

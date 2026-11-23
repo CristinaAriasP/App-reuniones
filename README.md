@@ -14,7 +14,7 @@ Web app para tener en un solo sitio las notas de las reuniones, las tareas y las
   ("reunion" encuentra "Reunión") y se puede filtrar por proyecto, tipo y rango de fechas.
 - **Inicio** con próximas entregas, últimas reuniones y tareas pendientes/vencidas.
 - **Cuestionario en cada reunión**: una plantilla de preguntas (Sí/No con opciones, una sola opción, varias opciones o texto libre, con subpreguntas que solo aparecen si la respuesta es «Sí») que se edita en *Ajustes* y aparece en todas las reuniones. Cada proyecto tiene una pestaña con la última respuesta a cada pregunta.
-- **Ordenar con IA**: vuelcas la lluvia de ideas de la reunión tal cual y Claude la ordena por temas, separa decisiones y dudas, y propone tareas con fecha y rellena el cuestionario con lo que se mencione. Revisas el resultado antes de guardarlo.
+- **Ordenar con IA** (solo en el enlace de Claude): vuelcas la lluvia de ideas de la reunión tal cual y Claude la ordena por temas, separa decisiones y dudas, y propone tareas con fecha y rellena el cuestionario con lo que se mencione. Revisas el resultado antes de guardarlo.
 - **Copia de seguridad**: exportar e importar todos los datos en un archivo `.json`.
 
 ## Iniciar sesión y guardar en la nube (Firebase)
@@ -54,7 +54,5 @@ o automáticamente con el workflow `.github/workflows/firebase.yml` al subir cam
 
 ## IA (Ordenar con IA)
 
-- **Dentro de claude.ai** (el enlace de artefacto) usa la cuenta de Claude de quien la abre; no hay que configurar nada.
-- **Fuera de claude.ai** (la versión de Firebase o en local) hace falta una clave de API de Anthropic, que se pega en *Ajustes*.
-  La clave se guarda solo en el navegador y la app llama directamente a la API de Anthropic con el modelo `claude-opus-5-5`
-  y salidas estructuradas. Cada uso consume un poco de saldo de esa cuenta.
+- **Solo dentro de claude.ai** (el enlace de Claude) usa la cuenta de Claude de quien la abre; no hay que configurar nada.
+- **La versión de Firebase no tiene IA**: no usa ninguna clave de API y no envía nada a Anthropic.

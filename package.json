@@ -12,7 +12,6 @@
     "emulators": "firebase emulators:start --only auth,firestore --project demo-reuniones"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.9.0",
     "dexie": "^4.4.7",
     "dexie-react-hooks": "^4.4.0",
     "firebase": "^13.4.0",
